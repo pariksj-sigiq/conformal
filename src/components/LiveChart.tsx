@@ -1,19 +1,25 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { Check, Copy, Pin, PinOff, RefreshCw, Table2, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { VegaEmbedProps } from "react-vega";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  Scatter,
+  ScatterChart,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 import { getDuckDbStore, rowsToCsv, tablesForSql } from "./duckdb-client";
 import type { ChartBundle } from "./types";
-
-type SpecObject = Record<string, unknown>;
-
-const VegaEmbed = dynamic(() => import("react-vega").then((mod) => mod.VegaEmbed), {
-  ssr: false,
-  loading: () => <div className="chart-loading">Preparing chart canvas</div>,
-});
 
 type LiveChartProps = {
   chart: ChartBundle;
@@ -31,11 +37,23 @@ type QueryState = {
   tables: string[];
 };
 
+type ChartKind = "area" | "line" | "bar" | "horizontal-bar" | "scatter";
+
+type ChartModel = {
+  kind: ChartKind;
+  data: Record<string, unknown>[];
+  config: ChartConfig;
+  xKey: string;
+  yKeys: string[];
+  labelKey?: string;
+  colorKey?: string;
+};
+
+const SERIES_COLORS = ["#bd2430", "#2f7d87", "#bc7a22", "#5f7d4f", "#d86b73", "#6f6b66", "#7f6bbd", "#119c72"];
+
 export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove }: LiveChartProps) {
   const [query, setQuery] = useState<QueryState>({ rows: [], loading: true, tables: [] });
   const [copied, setCopied] = useState<"sql" | "csv" | null>(null);
-  const canvasRef = useRef<HTMLDivElement | null>(null);
-  const [plotWidth, setPlotWidth] = useState(720);
 
   const runQuery = useCallback(async () => {
     setQuery((current) => ({ ...current, loading: true, error: undefined }));
@@ -99,20 +117,6 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
     };
   }, [chart.sql, live, runQuery]);
 
-  useEffect(() => {
-    const node = canvasRef.current;
-    if (!node) return;
-
-    const updateWidth = () => setPlotWidth(Math.max(180, Math.floor(node.clientWidth - 34)));
-    updateWidth();
-
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
-  const spec = useMemo(() => buildSpec(chart, query.rows, compact, plotWidth), [chart, compact, plotWidth, query.rows]);
-
   const copy = async (kind: "sql" | "csv") => {
     const text = kind === "sql" ? chart.sql : rowsToCsv(query.rows);
     await navigator.clipboard.writeText(text);
@@ -151,7 +155,7 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
         </div>
       </header>
 
-      <div className="chart-canvas" ref={canvasRef}>
+      <div className="chart-canvas">
         {query.loading && !query.rows.length ? (
           <div className="chart-loading">Running SQL and preparing chart</div>
         ) : query.error ? (
@@ -165,47 +169,290 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
             <span>The generated SQL ran successfully but returned an empty result set.</span>
           </div>
         ) : (
-          <VegaEmbed spec={spec as VegaEmbedProps["spec"]} options={{ actions: false }} />
+          <GeneratedChart chart={chart} rows={query.rows} compact={compact} />
         )}
       </div>
     </section>
   );
 }
 
-function buildSpec(chart: ChartBundle, rows: Record<string, unknown>[], compact: boolean | undefined, plotWidth: number): SpecObject {
-  const base: SpecObject = chart.spec && typeof chart.spec === "object" ? chart.spec : {};
-  const chartWidth = hasFacet(base) ? Math.max(180, Math.floor(plotWidth / 3) - 28) : plotWidth;
-  const height = compact ? 210 : chart.span === 1 ? 218 : 248;
+function GeneratedChart({ chart, rows, compact }: { chart: ChartBundle; rows: Record<string, unknown>[]; compact?: boolean }) {
+  const model = useMemo(() => buildChartModel(chart, rows), [chart, rows]);
 
-  if (Object.keys(base).length) {
+  if (!model) {
+    return (
+      <div className="chart-empty">
+        <strong>Chart ready</strong>
+        <span>The SQL returned rows, but there was no numeric field to plot.</span>
+      </div>
+    );
+  }
+
+  const heightClass = compact ? "h-[220px]" : chart.span === 1 ? "h-[226px]" : "h-[272px]";
+  const axisProps = {
+    tickLine: false,
+    axisLine: false,
+    tickMargin: 8,
+    minTickGap: 22,
+  };
+
+  if (model.kind === "scatter") {
+    return (
+      <ChartContainer config={model.config} className={cn("shadcn-chart aspect-auto w-full", heightClass)}>
+        <ScatterChart margin={{ left: 4, right: 14, top: 10, bottom: 8 }}>
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis {...axisProps} type="number" dataKey={model.xKey} name={labelize(model.xKey)} />
+          <YAxis {...axisProps} type="number" dataKey={model.yKeys[0]} name={labelize(model.yKeys[0])} width={42} />
+          <ChartTooltip cursor={{ strokeDasharray: "3 3" }} content={<ChartTooltipContent indicator="dot" />} />
+          <Scatter data={model.data} dataKey={model.yKeys[0]}>
+            {model.data.map((entry, index) => (
+              <Cell key={`${entry[model.labelKey ?? model.xKey]}-${index}`} fill={SERIES_COLORS[index % SERIES_COLORS.length]} />
+            ))}
+          </Scatter>
+        </ScatterChart>
+      </ChartContainer>
+    );
+  }
+
+  if (model.kind === "horizontal-bar") {
+    return (
+      <ChartContainer config={model.config} className={cn("shadcn-chart aspect-auto w-full", heightClass)}>
+        <BarChart data={model.data} layout="vertical" margin={{ left: 8, right: 20, top: 10, bottom: 4 }}>
+          <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+          <XAxis {...axisProps} type="number" />
+          <YAxis {...axisProps} type="category" dataKey={model.xKey} width={70} />
+          <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+          <Bar dataKey={model.yKeys[0]} radius={[0, 5, 5, 0]} fill={`var(--color-${cssVarKey(model.yKeys[0])})`} />
+        </BarChart>
+      </ChartContainer>
+    );
+  }
+
+  if (model.kind === "bar") {
+    return (
+      <ChartContainer config={model.config} className={cn("shadcn-chart aspect-auto w-full", heightClass)}>
+        <BarChart data={model.data} margin={{ left: 0, right: 12, top: 10, bottom: 4 }}>
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis {...axisProps} dataKey={model.xKey} />
+          <YAxis {...axisProps} width={42} domain={domainForSeries(model)} />
+          <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+          {model.yKeys.map((key, index) => (
+            <Bar key={key} dataKey={key} radius={[5, 5, 0, 0]} fill={`var(--color-${cssVarKey(key)})`} opacity={index ? 0.72 : 1} />
+          ))}
+        </BarChart>
+      </ChartContainer>
+    );
+  }
+
+  if (model.kind === "line") {
+    return (
+      <ChartContainer config={model.config} className={cn("shadcn-chart aspect-auto w-full", heightClass)}>
+        <LineChart data={model.data} margin={{ left: 0, right: 14, top: 10, bottom: 4 }}>
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis {...axisProps} dataKey={model.xKey} />
+          <YAxis {...axisProps} width={42} />
+          <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+          {model.yKeys.map((key) => (
+            <Line key={key} dataKey={key} type="monotone" stroke={`var(--color-${cssVarKey(key)})`} strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+          ))}
+        </LineChart>
+      </ChartContainer>
+    );
+  }
+
+  return (
+    <ChartContainer config={model.config} className={cn("shadcn-chart aspect-auto w-full", heightClass)}>
+      <AreaChart data={model.data} margin={{ left: 0, right: 14, top: 10, bottom: 4 }}>
+        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+        <XAxis {...axisProps} dataKey={model.xKey} />
+        <YAxis {...axisProps} width={42} domain={domainForSeries(model)} />
+        <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+        <Area
+          dataKey={model.yKeys[0]}
+          type="natural"
+          fill={`var(--color-${cssVarKey(model.yKeys[0])})`}
+          fillOpacity={0.18}
+          stroke={`var(--color-${cssVarKey(model.yKeys[0])})`}
+          strokeWidth={2.5}
+          activeDot={{ r: 5 }}
+        />
+        {model.yKeys.slice(1).map((key) => (
+          <Line key={key} dataKey={key} type="monotone" stroke={`var(--color-${cssVarKey(key)})`} strokeWidth={2.25} dot={false} activeDot={{ r: 5 }} />
+        ))}
+      </AreaChart>
+    </ChartContainer>
+  );
+}
+
+function buildChartModel(chart: ChartBundle, sourceRows: Record<string, unknown>[]): ChartModel | null {
+  const rows = normalizeRows(sourceRows);
+  const columns = Object.keys(rows[0] ?? {});
+  const numericColumns = columns.filter((column) => rows.some((row) => isNumericValue(row[column])));
+  if (!numericColumns.length) return null;
+
+  const textColumns = columns.filter((column) => !numericColumns.includes(column));
+  const kind = inferChartKind(chart, columns, numericColumns);
+
+  if (kind === "scatter") {
+    const [xKey, yKey] = numericColumns;
+    if (!xKey || !yKey) return buildSingleSeriesModel(chart, rows, columns, numericColumns, textColumns, "bar");
+    const labelKey = textColumns[0];
+    const yAlias = cssVarKey(yKey);
     return {
-      ...base,
-      width: chartWidth,
-      height,
-      data: { values: rows },
-      background: "transparent",
-      config: chartConfig,
+      kind: "scatter",
+      data: rows.map((row, index) => ({ ...row, [yAlias]: row[yKey], fill: SERIES_COLORS[index % SERIES_COLORS.length] })),
+      config: buildConfig([yAlias], [yKey]),
+      xKey,
+      yKeys: [yAlias],
+      labelKey,
     };
   }
 
-  const columns = Object.keys(rows[0] ?? { category: "No data", value: 0 });
-  const x = columns[0] ?? "category";
-  const y = columns.find((column) => rows.some((row) => typeof row[column] === "number")) ?? columns[1] ?? x;
+  return buildSingleSeriesModel(chart, rows, columns, numericColumns, textColumns, kind);
+}
+
+function buildSingleSeriesModel(
+  chart: ChartBundle,
+  rows: Record<string, unknown>[],
+  columns: string[],
+  numericColumns: string[],
+  textColumns: string[],
+  preferredKind: ChartKind,
+): ChartModel {
+  const xKey = pickXKey(columns, numericColumns, textColumns);
+  const yKey = pickYKey(chart, numericColumns, xKey);
+  const seriesKey = textColumns.find((column) => column !== xKey && uniqueValues(rows, column).length > 1 && uniqueValues(rows, column).length <= 8);
+  const shouldPivot = Boolean(seriesKey && preferredKind !== "horizontal-bar" && preferredKind !== "bar");
+
+  if (shouldPivot && seriesKey) {
+    const pivot = pivotRows(rows, xKey, seriesKey, yKey);
+    return {
+      kind: preferredKind === "bar" ? "bar" : preferredKind,
+      data: pivot.data,
+      config: buildConfig(pivot.series, pivot.labels),
+      xKey,
+      yKeys: pivot.series,
+    };
+  }
+
+  const yKeys = numericColumns.filter((column) => column !== xKey).slice(0, preferredKind === "bar" ? 3 : 2);
+  const finalYKeys = yKeys.length ? yKeys : [yKey];
+  const aliases = finalYKeys.map(cssVarKey);
 
   return {
-    $schema: "https://vega.github.io/schema/vega-lite/v6.json",
-    width: plotWidth,
-    height,
-    background: "transparent",
-    data: { values: rows.length ? rows : [{ [x]: "No rows", [y]: 0 }] },
-    mark: { type: "bar", cornerRadiusTopLeft: 3, cornerRadiusTopRight: 3, color: "#B8232E" },
-    encoding: {
-      x: { field: x, type: "nominal", axis: { labelAngle: -30, title: null } },
-      y: { field: y, type: "quantitative", axis: { title: null } },
-      tooltip: columns.map((field) => ({ field })),
-    },
-    config: chartConfig,
+    kind: preferredKind,
+    data: rows.map((row) => ({
+      ...row,
+      ...Object.fromEntries(finalYKeys.map((key, index) => [aliases[index], row[key]])),
+    })),
+    config: buildConfig(aliases, finalYKeys),
+    xKey,
+    yKeys: aliases,
   };
+}
+
+function inferChartKind(chart: ChartBundle, columns: string[], numericColumns: string[]): ChartKind {
+  const text = `${chart.title} ${chart.description ?? ""} ${columns.join(" ")}`.toLowerCase();
+  const mark = chart.spec?.mark;
+  const markType = typeof mark === "string" ? mark : mark && typeof mark === "object" && "type" in mark ? String(mark.type) : "";
+
+  if (markType.includes("line")) return "line";
+  if (markType.includes("area")) return "area";
+  if (markType.includes("point") || markType.includes("circle") || text.includes("scatter") || text.includes("digital engagement")) return "scatter";
+  if (text.includes("risk") || text.includes("churn") || text.includes("dealer")) return "horizontal-bar";
+  if (markType.includes("bar") || text.includes("orders") || text.includes("coverage by") || text.includes("by region")) return "bar";
+  if (text.includes("trend") || text.includes("weekly") || text.includes("quarter") || text.includes("wave")) return "area";
+  if (numericColumns.length >= 2) return "area";
+  return "bar";
+}
+
+function normalizeRows(rows: Record<string, unknown>[]) {
+  return rows.map((row) =>
+    Object.fromEntries(
+      Object.entries(row).map(([key, value]) => {
+        if (isNumericValue(value)) return [key, Number(value)];
+        return [key, value == null ? "" : String(value)];
+      }),
+    ),
+  );
+}
+
+function pickXKey(columns: string[], numericColumns: string[], textColumns: string[]) {
+  const preferredText = textColumns.find((column) => /(date|week|quarter|month|period|wave|year|zone|region|dealer|category|name)/i.test(column));
+  if (preferredText) return preferredText;
+  return textColumns[0] ?? columns.find((column) => !numericColumns.includes(column)) ?? columns[0] ?? "category";
+}
+
+function pickYKey(chart: ChartBundle, numericColumns: string[], xKey: string) {
+  const text = chart.title.toLowerCase();
+  const preferred = numericColumns.find((column) => {
+    const normalized = column.toLowerCase();
+    return (
+      column !== xKey &&
+      (text.includes(normalized) || /(nps|value|coverage|actual|planned|order|score|risk|amount|sales|visit|percent|rate|revenue|booked)/i.test(column))
+    );
+  });
+  return preferred ?? numericColumns.find((column) => column !== xKey) ?? numericColumns[0] ?? "value";
+}
+
+function pivotRows(rows: Record<string, unknown>[], xKey: string, seriesKey: string, yKey: string) {
+  const labels = uniqueValues(rows, seriesKey);
+  const series = labels.map(cssVarKey);
+  const byX = new Map<string, Record<string, unknown>>();
+
+  rows.forEach((row) => {
+    const xValue = String(row[xKey]);
+    const seriesValue = cssVarKey(String(row[seriesKey]));
+    const current = byX.get(xValue) ?? { [xKey]: xValue };
+    current[seriesValue] = Number(row[yKey]);
+    byX.set(xValue, current);
+  });
+
+  return { data: Array.from(byX.values()), series, labels };
+}
+
+function uniqueValues(rows: Record<string, unknown>[], key: string) {
+  return Array.from(new Set(rows.map((row) => String(row[key])).filter(Boolean)));
+}
+
+function isNumericValue(value: unknown) {
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value !== "string" || value.trim() === "") return false;
+  return Number.isFinite(Number(value));
+}
+
+function buildConfig(keys: string[], labels = keys): ChartConfig {
+  return Object.fromEntries(
+    keys.map((key, index) => [
+      key,
+      {
+        label: labelize(labels[index] ?? key),
+        color: SERIES_COLORS[index % SERIES_COLORS.length],
+      },
+    ]),
+  ) satisfies ChartConfig;
+}
+
+function domainForSeries(model: ChartModel): [number | "auto", number | "auto"] {
+  const values = model.data.flatMap((row) => model.yKeys.map((key) => Number(row[key])).filter(Number.isFinite));
+  if (!values.length) return ["auto", "auto"];
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const padding = Math.max((max - min) * 0.18, max > 100 ? 8 : 2);
+  return [Math.floor(min - padding), Math.ceil(max + padding)];
+}
+
+function cssVarKey(key: string) {
+  return key.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function labelize(key: string) {
+  return key
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function inferDomain(chart: ChartBundle, tables: string[]) {
@@ -217,29 +464,3 @@ function inferDomain(chart: ChartBundle, tables: string[]) {
   if (text.includes("commodity")) return "Markets";
   return tables.length ? tables.join(", ") : "Analysis";
 }
-
-function hasFacet(spec: SpecObject) {
-  const encoding = spec.encoding;
-  return Boolean(
-    spec.facet ||
-      (encoding &&
-        typeof encoding === "object" &&
-        "facet" in encoding),
-  );
-}
-
-const chartConfig = {
-  font: "Arial, ui-sans-serif, system-ui, sans-serif",
-  view: { stroke: "transparent" },
-  axis: {
-    domainColor: "#D8D4CE",
-    gridColor: "#E9E5DF",
-    labelColor: "#6f6b66",
-    tickColor: "#D8D4CE",
-  },
-  legend: {
-    labelColor: "#4a4641",
-    symbolStrokeWidth: 2,
-    orient: "bottom",
-  },
-};

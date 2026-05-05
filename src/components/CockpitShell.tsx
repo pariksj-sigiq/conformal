@@ -137,10 +137,10 @@ function MobileShell({ live }: { live: boolean }) {
       </div>
 
       <nav className="mobile-tabbar" aria-label="Mobile primary navigation">
-        <MobileTabButton active={activeTab === "home"} icon={<Home size={24} />} label="Home" onClick={() => setActiveTab("home")} />
-        <MobileTabButton active={activeTab === "chat"} icon={<MessageSquare size={24} />} label="Chat" onClick={() => setActiveTab("chat")} />
-        <MobileTabButton active={activeTab === "charts"} icon={<BarChart3 size={25} />} label="Charts" onClick={() => setActiveTab("charts")} />
-        <MobileTabButton active={activeTab === "history"} icon={<Clock3 size={24} />} label="History" onClick={() => setActiveTab("history")} />
+        <MobileTabButton active={activeTab === "home"} icon={<Home size={21} />} label="Home" onClick={() => setActiveTab("home")} />
+        <MobileTabButton active={activeTab === "chat"} icon={<MessageSquare size={21} />} label="Chat" onClick={() => setActiveTab("chat")} />
+        <MobileTabButton active={activeTab === "charts"} icon={<BarChart3 size={22} />} label="Charts" onClick={() => setActiveTab("charts")} />
+        <MobileTabButton active={activeTab === "history"} icon={<Clock3 size={21} />} label="History" onClick={() => setActiveTab("history")} />
       </nav>
     </section>
   );
@@ -162,7 +162,40 @@ function MobileHeader({ live }: { live: boolean }) {
 }
 
 function MobileHome() {
-  return <div className="mobile-home" aria-label="Project Leap home" />;
+  return (
+    <div className="mobile-home" aria-label="Project Leap home">
+      <section className="mobile-home-hero">
+        <span>Today</span>
+        <h1>Executive cockpit</h1>
+        <p>Ask business questions, review generated charts, and keep recurring operating views close.</p>
+      </section>
+
+      <section className="mobile-home-kpis" aria-label="Today snapshot">
+        <article>
+          <span>Coverage</span>
+          <strong>73%</strong>
+          <em>+4pp vs plan</em>
+        </article>
+        <article>
+          <span>Orders</span>
+          <strong>₹14.2 Cr</strong>
+          <em>+12% vs plan</em>
+        </article>
+      </section>
+
+      <section className="mobile-home-list" aria-label="Pinned views">
+        <h2>Pinned views</h2>
+        <div>
+          <strong>Main dashboard</strong>
+          <span>Live field force and dealer risk</span>
+        </div>
+        <div>
+          <strong>Procurement view</strong>
+          <span>Savings, price movement, and exceptions</span>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function MobileChat({ onOpenCharts }: { onOpenCharts: () => void }) {
@@ -189,6 +222,7 @@ function MobileChat({ onOpenCharts }: { onOpenCharts: () => void }) {
         <button type="button">Wave 1</button>
         <button type="button">Markets</button>
       </div>
+      <div className="mobile-chat-spacer" aria-hidden="true" />
       <form className="mobile-compose">
         <input aria-label="Follow up question" placeholder="Follow up..." />
         <button type="button" aria-label="Ask follow up">

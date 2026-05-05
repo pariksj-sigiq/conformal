@@ -4,6 +4,7 @@ import { ChevronDown, CirclePlus, Loader2, Send, Wrench } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { PromptInput, PromptInputActions, PromptInputTextarea } from "@/components/ui/prompt-input";
 import { LiveChart } from "./LiveChart";
 import type { ChartBundle, ChatMessage, TraceEvent } from "./types";
 
@@ -138,20 +139,27 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
           </div>
         ) : null}
 
-        <form className="prompt-box" onSubmit={submitPrompt}>
-          <textarea
+        <PromptInput
+          className="prompt-box"
+          value={input}
+          onValueChange={setInput}
+          onSubmit={() => void submitPrompt()}
+          isLoading={isSending}
+          disabled={isSending}
+          maxHeight={132}
+        >
+          <PromptInputTextarea
             suppressHydrationWarning
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
             placeholder="Or ask your own question..."
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submitPrompt(event);
-            }}
+            aria-label="Ask Project Leap"
           />
-          <button type="submit" disabled={!input.trim() || isSending} title="Send prompt">
-            {isSending ? <Loader2 size={18} className="animate-spin" /> : <><span>Ask</span><Send size={18} /></>}
-          </button>
-        </form>
+          <PromptInputActions className="prompt-actions">
+            <span className="prompt-hint">Enter to send · Shift Enter for a new line</span>
+            <button type="button" className="prompt-submit" disabled={!input.trim() || isSending} title="Send prompt" onClick={() => void submitPrompt()}>
+              {isSending ? <Loader2 size={18} className="animate-spin" /> : <><span>Ask</span><Send size={18} /></>}
+            </button>
+          </PromptInputActions>
+        </PromptInput>
       </section>
 
       <section className="canvas-pane">

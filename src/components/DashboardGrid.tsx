@@ -5,6 +5,7 @@ import { DndContext, DragEndEvent, KeyboardSensor, PointerSensor, useDraggable, 
 import { ArrowLeft, GripVertical, LayoutDashboard, RadioTower, Trash2 } from "lucide-react";
 import { CSSProperties, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { DuckDBStore } from "@/lib/duckdb-store";
 import { LiveChart } from "./LiveChart";
 import type { ChartBundle } from "./types";
 
@@ -32,6 +33,29 @@ export function DashboardGrid() {
     if (!hydrated) return;
     localStorage.setItem(PINNED_CHARTS_KEY, JSON.stringify(charts));
   }, [charts, hydrated]);
+
+  useEffect(() => {
+    if (!live) return;
+
+    const tables = [
+      "secondary_sales",
+      "field_force_activity",
+      "channel_partners",
+      "farmer_engagement",
+      "procurement_spend",
+      "wave1_microbattles",
+      "commodity_prices",
+      "farmer_nps",
+    ];
+    let index = 0;
+    const timer = window.setInterval(() => {
+      DuckDBStore.mutate(tables[index % tables.length]);
+      DuckDBStore.mutate(tables[(index + 3) % tables.length]);
+      index += 1;
+    }, 4200);
+
+    return () => window.clearInterval(timer);
+  }, [live]);
 
   const remove = (id: string) => setCharts((current) => current.filter((chart) => chart.id !== id));
 

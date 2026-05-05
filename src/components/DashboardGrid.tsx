@@ -11,20 +11,27 @@ import type { ChartBundle } from "./types";
 const PINNED_CHARTS_KEY = "project-leap-pinned-charts";
 
 export function DashboardGrid() {
-  const [charts, setCharts] = useState<ChartBundle[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      return JSON.parse(localStorage.getItem(PINNED_CHARTS_KEY) ?? "[]") as ChartBundle[];
-    } catch {
-      return [];
-    }
-  });
+  const [charts, setCharts] = useState<ChartBundle[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const [live, setLive] = useState(true);
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
   useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        setCharts(JSON.parse(localStorage.getItem(PINNED_CHARTS_KEY) ?? "[]") as ChartBundle[]);
+      } catch {
+        setCharts([]);
+      } finally {
+        setHydrated(true);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(PINNED_CHARTS_KEY, JSON.stringify(charts));
-  }, [charts]);
+  }, [charts, hydrated]);
 
   const remove = (id: string) => setCharts((current) => current.filter((chart) => chart.id !== id));
 

@@ -106,19 +106,26 @@ export function CockpitShell() {
 }
 
 export function usePinnedCharts() {
-  const [charts, setCharts] = useState<ChartBundle[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw = localStorage.getItem(PINNED_CHARTS_KEY);
-      return raw ? (JSON.parse(raw) as ChartBundle[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [charts, setCharts] = useState<ChartBundle[]>([]);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const raw = localStorage.getItem(PINNED_CHARTS_KEY);
+        setCharts(raw ? (JSON.parse(raw) as ChartBundle[]) : []);
+      } catch {
+        setCharts([]);
+      } finally {
+        setHydrated(true);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(PINNED_CHARTS_KEY, JSON.stringify(charts));
-  }, [charts]);
+  }, [charts, hydrated]);
 
   return [charts, setCharts] as const;
 }

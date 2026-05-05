@@ -16,6 +16,7 @@ export type ChartBundle = {
   sql: string;
   description?: string;
   spec?: Record<string, unknown>;
+  span?: 1 | 2 | 3 | 4;
   generatedAt?: number;
 };
 

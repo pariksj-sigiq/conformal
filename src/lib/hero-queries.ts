@@ -1,9 +1,9 @@
 import type { ChartPayload, ChatEvent } from "@/lib/agent-types";
 
-const axis = { labelColor: "#5f5a55", titleColor: "#3c3835", gridColor: "#ebe5dd" };
+const axis = { labelColor: "#6f6b66", titleColor: "#3c3835", gridColor: "#ebe5dd", domain: false, ticks: false };
 const config = {
   background: "transparent",
-  font: "IBM Plex Sans, ui-sans-serif, system-ui",
+  font: "var(--font-sans), ui-sans-serif, system-ui",
   axis,
   view: { stroke: null },
   legend: { labelColor: "#4d4742", titleColor: "#302c29" },
@@ -45,53 +45,90 @@ function baseTrace(table: string): ChatEvent[] {
 function fieldForceEvents(): ChatEvent[] {
   const charts = [
     chart(
-      "field-coverage",
-      "Field force coverage by region, current quarter",
-      "Coverage is strongest in South and West. North is the clear execution gap despite meaningful order volume.",
-      "-- hero:field_force_coverage\nSELECT region, SUM(visits_done)::DOUBLE / SUM(visits_planned) AS coverage, SUM(orders_booked) AS orders FROM field_force_activity WHERE date >= '2026-04-01' GROUP BY region ORDER BY coverage DESC LIMIT 10",
-      {
-        data: { name: "data" },
-        mark: { type: "bar", cornerRadiusEnd: 5, tooltip: true },
-        encoding: {
-          x: { field: "coverage", type: "quantitative", axis: { format: ".0%" } },
-          y: { field: "region", type: "nominal", sort: "-x" },
-          color: { condition: { test: "datum.coverage < .8", value: "#B8232E" }, value: "#2F6F73" },
-        },
-      },
-    ),
-    chart(
       "field-trend",
-      "Weekly visits: planned vs delivered",
-      "The delivery gap narrowed in the latest weeks, but the quarter still shows persistent under-delivery versus plan.",
-      "-- hero:field_force_trend\nSELECT week_starting, SUM(visits_done) AS done, SUM(visits_planned) AS planned FROM field_force_activity WHERE date >= '2026-02-01' GROUP BY 1 ORDER BY 1 LIMIT 20",
+      "Weekly visits: planned vs actual",
+      "The week-9 recovery confirms the Allahabad TBM intervention is holding. FY28 trajectory stays intact if East sustains this pace through March.",
+      "-- hero:field_force_trend\nSELECT week_starting, SUM(visits_done) AS actual, SUM(visits_planned) AS planned FROM field_force_activity WHERE date >= '2026-02-01' GROUP BY 1 ORDER BY 1 LIMIT 11",
       {
         data: { name: "data" },
-        transform: [{ fold: ["planned", "done"], as: ["series", "visits"] }],
-        mark: { type: "line", point: true, tooltip: true },
-        encoding: {
-          x: { field: "week", type: "temporal" },
-          y: { field: "visits", type: "quantitative" },
-          color: { field: "series", type: "nominal", scale: { range: ["#B8A36A", "#B8232E"] } },
-        },
+        layer: [
+          {
+            mark: { type: "area", color: "#B8232E", opacity: 0.08, interpolate: "monotone" },
+            encoding: {
+              x: { field: "week_starting", type: "temporal", axis: { title: null, format: "W%-U" } },
+              y: { field: "actual", type: "quantitative", axis: { title: null } },
+            },
+          },
+          {
+            mark: { type: "line", stroke: "#7a756f", strokeDash: [5, 4], strokeWidth: 2, tooltip: true },
+            encoding: {
+              x: { field: "week_starting", type: "temporal" },
+              y: { field: "planned", type: "quantitative" },
+            },
+          },
+          {
+            mark: { type: "line", color: "#B8232E", point: { filled: true, size: 60 }, strokeWidth: 3, tooltip: true },
+            encoding: {
+              x: { field: "week_starting", type: "temporal" },
+              y: { field: "actual", type: "quantitative" },
+            },
+          },
+          {
+            mark: { type: "text", text: "dip W5", dx: 26, dy: -18, color: "#77716b", fontSize: 13 },
+            transform: [{ window: [{ op: "row_number", as: "rowNumber" }] }, { filter: "datum.rowNumber == 5" }],
+            encoding: {
+              x: { field: "week_starting", type: "temporal" },
+              y: { field: "actual", type: "quantitative" },
+            },
+          },
+        ],
+        resolve: { scale: { color: "independent" } },
       },
+      3,
     ),
     chart(
-      "mgo-leaderboard",
-      "Top MGOs by orders booked",
-      "The top performers are concentrated outside North, which suggests the gap is more operating rhythm than demand.",
-      "-- hero:mgo_leaderboard\nSELECT mgo_id, region, SUM(orders_booked) AS orders FROM field_force_activity WHERE date >= '2026-04-01' GROUP BY 1,2 ORDER BY orders DESC LIMIT 10",
+      "north-churn-inline",
+      "Churn risk",
+      "LKO and PAT sit above the intervention line; BPL should be managed through amber governance while JPR and AMD remain stable.",
+      "-- hero:north_churn_inline\nSELECT dealer_id, churn_risk FROM channel_partners WHERE region = 'North' ORDER BY churn_risk DESC LIMIT 5",
       {
         data: { name: "data" },
-        mark: { type: "bar", tooltip: true },
-        encoding: {
-          x: { field: "orders", type: "quantitative" },
-          y: { field: "mgo_id", type: "nominal", sort: "-x" },
-          color: { field: "region", type: "nominal", scale: { range: ["#B8232E", "#2F6F73", "#6E7F4F", "#C08A3E", "#5C6670"] } },
-        },
+        layer: [
+          {
+            mark: { type: "bar", cornerRadiusEnd: 3, tooltip: true },
+            encoding: {
+              x: { field: "churn_risk", type: "quantitative", axis: null, scale: { domain: [0, 1] } },
+              y: { field: "dealer_id", type: "nominal", sort: "-x", axis: { title: null } },
+              color: {
+                condition: [
+                  { test: "datum.churn_risk >= 0.7", value: "#B8232E" },
+                  { test: "datum.churn_risk >= 0.45", value: "#BA7517" },
+                ],
+                value: "#1D9E75",
+              },
+            },
+          },
+          {
+            mark: { type: "text", align: "left", dx: 5, baseline: "middle", fontSize: 12 },
+            encoding: {
+              x: { field: "churn_risk", type: "quantitative" },
+              y: { field: "dealer_id", type: "nominal", sort: "-x" },
+              text: { field: "churn_risk", type: "quantitative", format: ".2f" },
+              color: {
+                condition: [
+                  { test: "datum.churn_risk >= 0.7", value: "#B8232E" },
+                  { test: "datum.churn_risk >= 0.45", value: "#BA7517" },
+                ],
+                value: "#1D9E75",
+              },
+            },
+          },
+        ],
       },
+      1,
     ),
   ];
-  return [...baseTrace("field_force_activity"), ...charts.map((chart) => ({ type: "chart" as const, chart })), { type: "final", text: "Field execution is broadly healthy, but North is holding back the quarter. I would treat this as a focused operating cadence issue: inspect North MGO visit completion, protect the high performers, and use the next two weeks to close the planned-versus-done gap." }];
+  return [...baseTrace("field_force_activity"), ...charts.map((chart) => ({ type: "chart" as const, chart })), { type: "final", text: "North leads at 86% coverage; East trails at 61%, its weakest quarter since Q1 FY24. The week-9 recovery confirms the Allahabad TBM intervention is holding. FY28 trajectory stays intact if East sustains this pace through March." }];
 }
 
 function procurementEvents(): ChatEvent[] {

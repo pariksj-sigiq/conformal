@@ -54,9 +54,9 @@ function runHeroQuery(sql: string): Row[] {
     return Object.entries(buckets)
       .filter((_, index) => index % 7 === 0)
       .map(([date, rows]) => ({
-        week: date,
+        week_starting: date,
         planned: sum(rows, "visits_planned"),
-        done: sum(rows, "visits_done"),
+        actual: sum(rows, "visits_done"),
       }));
   }
 
@@ -116,6 +116,16 @@ function runHeroQuery(sql: string): Row[] {
       .filter((row) => row.region === "North")
       .sort((a, b) => Number(b.churn_risk) - Number(a.churn_risk))
       .slice(0, 12);
+  }
+
+  if (normalized.includes("north_churn_inline")) {
+    return [
+      { dealer_id: "LKO", churn_risk: 0.8 },
+      { dealer_id: "PAT", churn_risk: 0.74 },
+      { dealer_id: "BPL", churn_risk: 0.52 },
+      { dealer_id: "JPR", churn_risk: 0.38 },
+      { dealer_id: "AMD", churn_risk: 0.22 },
+    ];
   }
 
   if (normalized.includes("north_churn_dso")) {

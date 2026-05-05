@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Check, Copy, DatabaseZap, Pin, PinOff, RefreshCw, Table2, Trash2 } from "lucide-react";
+import { Check, Copy, Pin, PinOff, RefreshCw, Table2, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { VegaEmbedProps } from "react-vega";
 import { cn } from "@/lib/utils";
@@ -103,7 +103,7 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
     const node = canvasRef.current;
     if (!node) return;
 
-    const updateWidth = () => setPlotWidth(Math.max(280, Math.floor(node.clientWidth - 170)));
+    const updateWidth = () => setPlotWidth(Math.max(180, Math.floor(node.clientWidth - 34)));
     updateWidth();
 
     const observer = new ResizeObserver(updateWidth);
@@ -121,15 +121,12 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
   };
 
   return (
-    <section className={cn("chart-panel group", compact && "chart-panel-compact")}>
+    <section className={cn("chart-panel group", compact && "chart-panel-compact", chart.span && `chart-span-${chart.span}`)}>
       <header className="chart-header">
-        <div className="min-w-0">
-          <div className="chart-eyebrow">
-            <DatabaseZap size={13} />
-            {query.tables.length ? query.tables.join(", ") : "Query"}
-          </div>
+        <div className="chart-title-block">
+          <div className="chart-eyebrow">{inferDomain(chart, query.tables)}</div>
           <h3>{chart.title}</h3>
-          {chart.description ? <p>{chart.description}</p> : null}
+          {chart.description && chart.span !== 1 ? <p>{chart.description}</p> : null}
         </div>
         <div className="chart-actions">
           <button type="button" title="Refresh" onClick={runQuery}>
@@ -178,12 +175,13 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
 function buildSpec(chart: ChartBundle, rows: Record<string, unknown>[], compact: boolean | undefined, plotWidth: number): SpecObject {
   const base: SpecObject = chart.spec && typeof chart.spec === "object" ? chart.spec : {};
   const chartWidth = hasFacet(base) ? Math.max(180, Math.floor(plotWidth / 3) - 28) : plotWidth;
+  const height = compact ? 210 : chart.span === 1 ? 218 : 248;
 
   if (Object.keys(base).length) {
     return {
       ...base,
       width: chartWidth,
-      height: compact ? 210 : 300,
+      height,
       data: { values: rows },
       background: "transparent",
       config: chartConfig,
@@ -197,7 +195,7 @@ function buildSpec(chart: ChartBundle, rows: Record<string, unknown>[], compact:
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v6.json",
     width: plotWidth,
-    height: compact ? 210 : 300,
+    height,
     background: "transparent",
     data: { values: rows.length ? rows : [{ [x]: "No rows", [y]: 0 }] },
     mark: { type: "bar", cornerRadiusTopLeft: 3, cornerRadiusTopRight: 3, color: "#B8232E" },
@@ -208,6 +206,16 @@ function buildSpec(chart: ChartBundle, rows: Record<string, unknown>[], compact:
     },
     config: chartConfig,
   };
+}
+
+function inferDomain(chart: ChartBundle, tables: string[]) {
+  const text = `${chart.title} ${tables.join(" ")}`.toLowerCase();
+  if (text.includes("field")) return "Field Force";
+  if (text.includes("churn") || text.includes("channel")) return "North Zone";
+  if (text.includes("procurement")) return "Procurement";
+  if (text.includes("nps") || text.includes("farmer")) return "Farmer Engagement";
+  if (text.includes("commodity")) return "Markets";
+  return tables.length ? tables.join(", ") : "Analysis";
 }
 
 function hasFacet(spec: SpecObject) {
@@ -221,12 +229,17 @@ function hasFacet(spec: SpecObject) {
 }
 
 const chartConfig = {
-  font: "Inter, ui-sans-serif, system-ui, sans-serif",
+  font: "Arial, ui-sans-serif, system-ui, sans-serif",
   view: { stroke: "transparent" },
   axis: {
-    domainColor: "#D7DCE2",
-    gridColor: "#E9EDF2",
-    labelColor: "#657080",
-    tickColor: "#D7DCE2",
+    domainColor: "#D8D4CE",
+    gridColor: "#E9E5DF",
+    labelColor: "#6f6b66",
+    tickColor: "#D8D4CE",
+  },
+  legend: {
+    labelColor: "#4a4641",
+    symbolStrokeWidth: 2,
+    orient: "bottom",
   },
 };

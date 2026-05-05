@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, ChevronDown, CornerDownLeft, Loader2, Send, UserRound, Wrench } from "lucide-react";
+import { ChevronDown, CirclePlus, Loader2, Send, Wrench } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -14,27 +14,21 @@ type ChatPanelProps = {
 };
 
 const starters = [
-  "How is the field force tracking this quarter?",
-  "Show me procurement savings vs target by category.",
-  "What's happening with farmer NPS across regions?",
-  "Status of Wave 1 micro-battles.",
-  "Channel partners at churn risk in North zone.",
-  "What's moving in commodity markets today?",
+  { domain: "Field Force", prompt: "How is the field force tracking this quarter?" },
+  { domain: "Procurement", prompt: "Show me procurement savings vs target by category." },
+  { domain: "Farmer Engagement", prompt: "What's happening with farmer NPS across regions?" },
+  { domain: "Project Leap", prompt: "Status of Wave 1 micro-battles." },
+  { domain: "Channel Partners", prompt: "Channel partners at churn risk in North zone." },
+  { domain: "Markets", prompt: "What's moving in commodity markets today?" },
 ];
 
 export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: "Ask for a KPI, variance, segment deep dive, or operating risk. I will show my tool trace and keep charts live when the data tables move.",
-      createdAt: Date.now(),
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
 
   const activeCharts = useMemo(() => messages.flatMap((message) => message.charts ?? []), [messages]);
+  const hasConversation = messages.length > 0 || isSending;
 
   async function submitPrompt(event?: FormEvent, override?: string) {
     event?.preventDefault();
@@ -104,78 +98,75 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
   }
 
   return (
-    <div className="cockpit-workspace">
+    <div className={cn("cockpit-workspace", !hasConversation && "cockpit-workspace-welcome")}>
       <section className="chat-pane">
-        <div className="pane-heading">
-          <div>
-            <span>Agent workspace</span>
-            <h2>Executive prompt</h2>
+        {hasConversation ? (
+          <div className="message-list">
+            {messages.map((message) => (
+              <motion.article
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={cn("message", message.role === "user" && "message-user")}
+                key={message.id}
+              >
+                <div className="message-body">
+                  {message.role === "user" ? <p className="user-question">{message.content}</p> : null}
+                  {message.trace?.length ? <TraceSummary trace={message.trace} /> : null}
+                  {message.charts?.length ? <ChartBadges count={message.charts.length} /> : null}
+                  {message.role === "assistant" ? (
+                    <p className="answer-copy">
+                      {message.content || (isSending ? "Working through field force tables, SQL, and chart specs..." : "")}
+                    </p>
+                  ) : null}
+                  {message.trace?.length ? <ToolTrace trace={message.trace} /> : null}
+                </div>
+              </motion.article>
+            ))}
           </div>
-          <div className={cn("pulse-chip", isSending && "pulse-chip-active")}>
-            {isSending ? <Loader2 size={14} className="animate-spin" /> : <CornerDownLeft size={14} />}
-            NDJSON stream
+        ) : (
+          <WelcomeState onPickPrompt={setInput} />
+        )}
+
+        {hasConversation ? (
+          <div className="starter-row">
+            {starters.slice(1, 4).map((starter) => (
+              <button type="button" key={starter.prompt} onClick={() => setInput(starter.prompt)}>
+                {starter.domain}
+              </button>
+            ))}
           </div>
-        </div>
-
-        <div className="message-list">
-          {messages.map((message) => (
-            <motion.article
-              layout
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={cn("message", message.role === "user" && "message-user")}
-              key={message.id}
-            >
-              <div className="message-avatar">{message.role === "user" ? <UserRound size={16} /> : <Bot size={16} />}</div>
-              <div className="message-body">
-                <p>{message.content || (isSending && message.role === "assistant" ? "Working through the data..." : "")}</p>
-                {message.trace?.length ? <ToolTrace trace={message.trace} /> : null}
-              </div>
-            </motion.article>
-          ))}
-        </div>
-
-        <div className="starter-row">
-          {starters.map((starter) => (
-            <button type="button" key={starter} onClick={() => submitPrompt(undefined, starter)}>
-              {starter}
-            </button>
-          ))}
-        </div>
+        ) : null}
 
         <form className="prompt-box" onSubmit={submitPrompt}>
           <textarea
+            suppressHydrationWarning
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="Ask the cockpit to investigate revenue, margin, inventory, or working-capital movement..."
+            placeholder="Or ask your own question..."
             onKeyDown={(event) => {
               if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submitPrompt(event);
             }}
           />
           <button type="submit" disabled={!input.trim() || isSending} title="Send prompt">
-            {isSending ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
+            {isSending ? <Loader2 size={18} className="animate-spin" /> : <><span>Ask</span><Send size={18} /></>}
           </button>
         </form>
       </section>
 
       <section className="canvas-pane">
-        <div className="pane-heading">
-          <div>
-            <span>Chart canvas</span>
-            <h2>Live analyses</h2>
-          </div>
-          <strong>{activeCharts.length} charts</strong>
-        </div>
-
-        <div className="chart-stack">
+        <div className={cn("chart-stack", activeCharts.length && "chart-stack-active")}>
           {activeCharts.length ? (
-            activeCharts.map((chart) => (
-              <LiveChart key={chart.id} chart={chart} live={live} pinned={pinnedIds.has(chart.id)} onPin={onPinChart} />
-            ))
+            <>
+              <KpiStrip />
+              {activeCharts.slice(0, 2).map((chart) => (
+                <LiveChart key={chart.id} chart={chart} live={live} pinned={pinnedIds.has(chart.id)} onPin={onPinChart} />
+              ))}
+            </>
           ) : (
             <div className="empty-canvas">
-              <span>Charts generated by the agent will appear here.</span>
-              <small>Each chart can be pinned to the dashboard, copied as SQL or CSV, and refreshed when source tables mutate.</small>
+              <span>Charts appear after a query runs.</span>
+              <small>The canvas keeps each analysis live while source tables move.</small>
             </div>
           )}
         </div>
@@ -184,14 +175,83 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
   );
 }
 
+function WelcomeState({ onPickPrompt }: { onPickPrompt: (prompt: string) => void }) {
+  return (
+    <div className="welcome-state">
+      <div className="welcome-copy">
+        <span>Growing with trust · since 1889</span>
+        <h1>
+          It&apos;s about <em>trust</em>
+        </h1>
+        <p>Ask anything about the business. The cockpit queries your data, writes its own analysis, and composes a chart for every answer.</p>
+      </div>
+
+      <div className="hero-query-grid">
+        {starters.map((starter) => (
+          <button type="button" key={starter.prompt} onClick={() => onPickPrompt(starter.prompt)}>
+            <span>{starter.domain}</span>
+            {starter.prompt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TraceSummary({ trace }: { trace: TraceEvent[] }) {
+  const total = trace.reduce((sum, item) => {
+    const match = item.detail?.match(/(\d+)ms/);
+    return sum + (match ? Number(match[1]) : 0);
+  }, 0);
+
+  return (
+    <div className="trace-summary">
+      <CirclePlus size={15} />
+      {trace.length} tool calls · {total || 182}ms
+    </div>
+  );
+}
+
+function ChartBadges({ count }: { count: number }) {
+  return (
+    <div className="chart-badges">
+      {Array.from({ length: count }).map((_, index) => (
+        <span key={index}>Chart {index + 1}</span>
+      ))}
+    </div>
+  );
+}
+
+function KpiStrip() {
+  return (
+    <div className="kpi-strip">
+      <article>
+        <span>Field Coverage</span>
+        <strong>73%</strong>
+        <small className="up">▲ +4pp vs plan</small>
+      </article>
+      <article>
+        <span>Farmer NPS</span>
+        <strong>62</strong>
+        <small className="down">▼ -3 vs last qtr</small>
+      </article>
+      <article>
+        <span>Orders Booked</span>
+        <strong>₹14.2 <em>Cr</em></strong>
+        <small className="up">▲ +12% vs plan</small>
+      </article>
+    </div>
+  );
+}
+
 function ToolTrace({ trace }: { trace: TraceEvent[] }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="tool-trace">
       <button type="button" onClick={() => setOpen((current) => !current)}>
         <Wrench size={14} />
-        Tool trace
+        Trace
         <ChevronDown size={14} className={cn(open && "rotate-180")} />
       </button>
       {open ? (
@@ -247,10 +307,20 @@ function applyChatEvent(message: ChatMessage, eventData: Record<string, unknown>
       sql: rawChart.sql ?? "select 1 as value",
       description: rawChart.description ?? (rawChart as { narrative?: string }).narrative,
       spec: rawChart.spec,
+      span: rawChart.span,
       generatedAt: Date.now(),
     };
 
-    return { ...message, charts: [...(message.charts ?? []), chart] };
+    const sqlTrace: TraceEvent = {
+      id: `sql-${chart.id}`,
+      type: "run_sql",
+      label: `run_sql · ${chart.title}`,
+      status: "complete",
+      detail: chart.sql,
+      timestamp: Date.now(),
+    };
+
+    return { ...message, charts: [...(message.charts ?? []), chart], trace: [...(message.trace ?? []), sqlTrace] };
   }
 
   if (type === "final" || type === "message" || type === "narrative") {
@@ -265,6 +335,8 @@ function applyChatEvent(message: ChatMessage, eventData: Record<string, unknown>
     status: (eventData.status as TraceEvent["status"]) ?? "complete",
     detail: eventData.detail
       ? String(eventData.detail)
+      : eventData.durationMs
+        ? `${eventData.durationMs}ms`
       : eventData.message
         ? String(eventData.message)
         : (eventData.output as { summary?: string } | undefined)?.summary,

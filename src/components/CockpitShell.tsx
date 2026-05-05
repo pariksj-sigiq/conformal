@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, Command, Gauge, Moon, PanelLeft, RadioTower, Search, SunMedium } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { DuckDBStore } from "@/lib/duckdb-store";
@@ -11,13 +11,8 @@ import type { ChartBundle } from "./types";
 const PINNED_CHARTS_KEY = "project-leap-pinned-charts";
 
 export function CockpitShell() {
-  const [dark, setDark] = useState(false);
   const [live, setLive] = useState(true);
   const [pinnedCharts, setPinnedCharts] = usePinnedCharts();
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-  }, [dark]);
 
   useEffect(() => {
     if (!live) return;
@@ -53,39 +48,52 @@ export function CockpitShell() {
 
   return (
     <main className="app-shell">
-      <aside className="left-rail">
-        <div className="rail-mark">
-          <span>PL</span>
+      <aside className="sfs-sidebar">
+        <div>
+          <div className="sfs-mark">SFS</div>
+          <div className="project-label">Project Leap</div>
         </div>
-        <nav aria-label="Primary">
-          <a href="#" className="active" title="Cockpit">
-            <Gauge size={19} />
+
+        <nav className="sidebar-nav" aria-label="Primary">
+          <a href="#" className="active">
+            Chat
           </a>
-          <Link href="/dashboard" title="Pinned dashboard">
-            <BarChart3 size={19} />
+          <Link href="/dashboard">
+            Dashboard
           </Link>
-          <a href="#" title="Live signals">
-            <RadioTower size={19} />
-          </a>
         </nav>
-        <button className="rail-button" type="button" title="Collapse rail">
-          <PanelLeft size={18} />
-        </button>
+
+        <section className="sidebar-section">
+          <h2>Conversations</h2>
+          <a className="conversation active" href="#">
+            <strong>Field force Q3</strong>
+            <span>2 mins ago</span>
+          </a>
+          <a className="conversation" href="#">
+            <strong>Procurement</strong>
+            <span>Yesterday</span>
+          </a>
+          <a className="conversation" href="#">
+            <strong>Farmer NPS</strong>
+            <span>Mon</span>
+          </a>
+        </section>
+
+        <section className="sidebar-section sidebar-pinned">
+          <h2>Pinned</h2>
+          <Link href="/dashboard" className="pinned-link">
+            <BarChart3 size={15} />
+            <span>Main dashboard</span>
+          </Link>
+        </section>
       </aside>
 
       <div className="app-main">
         <header className="top-bar">
-          <div className="top-title">
-            <span>Project Leap</span>
-            <h1>Executive cockpit</h1>
-          </div>
-
-          <div className="command-visual">
-            <Search size={15} />
-            <span>Ask, drill, pin, export</span>
-            <kbd>
-              <Command size={12} />K
-            </kbd>
+          <div className="breadcrumb">
+            <strong>Executive Cockpit</strong>
+            <span>/</span>
+            <em>Shriram Farm Solutions</em>
           </div>
 
           <div className="top-actions">
@@ -93,9 +101,8 @@ export function CockpitShell() {
               <span />
               Live
             </button>
-            <button type="button" className="icon-toggle" onClick={() => setDark((current) => !current)} title="Toggle theme">
-              {dark ? <SunMedium size={17} /> : <Moon size={17} />}
-            </button>
+            <div className="top-divider" />
+            <div className="avatar">AK</div>
           </div>
         </header>
 

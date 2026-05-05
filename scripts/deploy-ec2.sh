@@ -10,5 +10,18 @@ cd "$DEPLOY_PATH"
 docker compose -f "$COMPOSE_FILE" build app
 docker compose -f "$COMPOSE_FILE" up -d app
 
+for attempt in $(seq 1 20); do
+  if docker exec cut-nginx wget -qO- http://partner-dcmshriram:3000/api/health >/dev/null; then
+    break
+  fi
+
+  if [ "$attempt" -eq 20 ]; then
+    docker logs --tail=80 partner-dcmshriram
+    exit 1
+  fi
+
+  sleep 2
+done
+
 docker exec cut-nginx nginx -t
 docker exec cut-nginx nginx -s reload

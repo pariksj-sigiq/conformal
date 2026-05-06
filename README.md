@@ -51,7 +51,7 @@ Pushes to `main` run `.github/workflows/deploy.yml`, validate with `pnpm lint` a
 
 ### Azure OpenAI agent runtime
 
-`/api/chat` now prefers the ECEO backend sidecar at `ECEO_BACKEND_URL` and adapts its four-agent SSE stream into the cockpit's NDJSON stream. If the sidecar is unavailable, the app falls back to the older in-process TypeScript demo agent unless `ECEO_BACKEND_REQUIRED=1` is set.
+`/api/chat` now uses the ECEO backend sidecar at `ECEO_BACKEND_URL` and adapts its four-agent SSE stream into the cockpit's NDJSON stream. If the sidecar is unavailable, the app returns an error instead of silently showing legacy demo answers.
 
 This is additive: keep the existing cockpit capabilities intact. The original TypeScript agent orchestrator, deterministic demo fallback, generated chart rendering, live/pinned chart behavior, dashboard reuse, and `/api/chat` client contract should continue to work. Use `ECEO_BACKEND_DISABLED=1` to force the legacy in-process path for local testing or emergency fallback.
 
@@ -60,7 +60,7 @@ The backend supports Anthropic, Bedrock, and Azure OpenAI. For this repo, Azure 
 ```bash
 ECEO_BACKEND_URL=http://127.0.0.1:8000
 ECEO_BACKEND_DISABLED=0
-ECEO_BACKEND_REQUIRED=0
+ECEO_BACKEND_REQUIRED=1
 LLM_PROVIDER=azure_openai
 AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com
 AZURE_OPENAI_API_KEY=<secret>

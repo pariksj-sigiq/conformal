@@ -25,14 +25,12 @@ export async function POST(request: Request) {
           controller.close();
           return;
         } catch (error) {
-          if (process.env.ECEO_BACKEND_REQUIRED === "1") {
-            write({
-              type: "error",
-              message: error instanceof Error ? error.message : "ECEO backend stream failed.",
-            });
-            controller.close();
-            return;
-          }
+          write({
+            type: "error",
+            message: error instanceof Error ? error.message : "ECEO backend stream failed.",
+          });
+          controller.close();
+          return;
         }
       }
 

@@ -21,6 +21,7 @@ services:
       AZURE_OPENAI_TIMEOUT_MS: ${AZURE_OPENAI_TIMEOUT_MS:-}
       AZURE_OPENAI_MAX_OUTPUT_TOKENS: ${AZURE_OPENAI_MAX_OUTPUT_TOKENS:-}
       ECEO_BACKEND_URL: http://backend:8000
+      ECEO_BACKEND_REQUIRED: "1"
     expose:
       - "3000"
     depends_on:

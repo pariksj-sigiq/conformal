@@ -58,6 +58,11 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
   const runQuery = useCallback(async () => {
     setQuery((current) => ({ ...current, loading: true, error: undefined }));
 
+    if (chart.rows?.length) {
+      setQuery({ rows: chart.rows, loading: false, tables: await tablesForSql(chart.sql) });
+      return;
+    }
+
     const [store, tables] = await Promise.all([getDuckDbStore(), tablesForSql(chart.sql)]);
     if (!store) {
       setQuery({
@@ -80,7 +85,7 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
         error: error instanceof Error ? error.message : "Query failed.",
       });
     }
-  }, [chart.sql]);
+  }, [chart.rows, chart.sql]);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,7 +101,7 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
   }, [runQuery]);
 
   useEffect(() => {
-    if (!live) return;
+    if (!live || chart.rows?.length) return;
 
     let cleanup: (() => void) | undefined;
     let active = true;
@@ -115,7 +120,7 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
       active = false;
       cleanup?.();
     };
-  }, [chart.sql, live, runQuery]);
+  }, [chart.rows, chart.sql, live, runQuery]);
 
   const copy = async (kind: "sql" | "csv") => {
     const text = kind === "sql" ? chart.sql : rowsToCsv(query.rows);

@@ -1403,11 +1403,16 @@ textarea:focus-visible {
     margin-bottom: 12px;
   }
 
-  .mobile-home-list div {
+  .mobile-home-list button {
     display: grid;
     gap: 5px;
     border-top: 1px solid var(--line);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    background: transparent;
     padding: 15px 0;
+    text-align: left;
   }
 
   .mobile-home-list strong {
@@ -1419,6 +1424,37 @@ textarea:focus-visible {
   .mobile-home-list span {
     color: var(--muted);
     font-size: 16px;
+  }
+
+  .mobile-starters {
+    display: grid;
+    gap: 10px;
+  }
+
+  .mobile-starters button {
+    display: grid;
+    gap: 7px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: #fffdfa;
+    padding: 16px;
+    color: inherit;
+    text-align: left;
+  }
+
+  .mobile-starters span {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+
+  .mobile-starters strong {
+    color: #171717;
+    font-size: 17px;
+    font-weight: 540;
+    line-height: 1.3;
   }
 
   .mobile-chat-view {
@@ -1539,10 +1575,19 @@ textarea:focus-visible {
     color: white;
   }
 
+  .mobile-compose button:disabled {
+    opacity: 0.55;
+  }
+
   .mobile-charts-view {
     display: grid;
     gap: 14px;
     padding: 12px 0 28px;
+  }
+
+  .mobile-chart-stack {
+    display: grid;
+    gap: 14px;
   }
 
   .mobile-chart-title span,

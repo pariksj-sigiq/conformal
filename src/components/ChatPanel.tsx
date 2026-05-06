@@ -14,7 +14,7 @@ type ChatPanelProps = {
   onPinChart: (chart: ChartBundle) => void;
 };
 
-const starters = [
+export const starters = [
   { domain: "Finance", prompt: "Show me the revenue and EBITDA time series." },
   { domain: "Field Force", prompt: "How is the field force tracking this quarter?" },
   { domain: "Procurement", prompt: "Show me procurement savings vs target by category." },
@@ -280,7 +280,7 @@ function ToolTrace({ trace }: { trace: TraceEvent[] }) {
   );
 }
 
-async function consumeNdjson(stream: ReadableStream<Uint8Array>, onEvent: (eventData: Record<string, unknown>) => void) {
+export async function consumeNdjson(stream: ReadableStream<Uint8Array>, onEvent: (eventData: Record<string, unknown>) => void) {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -304,7 +304,7 @@ async function consumeNdjson(stream: ReadableStream<Uint8Array>, onEvent: (event
   if (final) onEvent(JSON.parse(final));
 }
 
-function applyChatEvent(message: ChatMessage, eventData: Record<string, unknown>): ChatMessage {
+export function applyChatEvent(message: ChatMessage, eventData: Record<string, unknown>): ChatMessage {
   const type = String(eventData.type ?? eventData.event ?? "trace");
 
   if (type === "chart" || eventData.chart || eventData.chartBundle) {
@@ -316,6 +316,7 @@ function applyChatEvent(message: ChatMessage, eventData: Record<string, unknown>
       description: rawChart.description ?? (rawChart as { narrative?: string }).narrative,
       spec: rawChart.spec,
       span: rawChart.span,
+      rows: Array.isArray(rawChart.rows) ? rawChart.rows : undefined,
       generatedAt: Date.now(),
     };
 

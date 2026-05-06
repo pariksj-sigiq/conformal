@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, ChevronRight, Clock3, Home, MessageSquare, Send } from "lucide-react";
-import type { ReactNode } from "react";
+import { BarChart3, ChevronRight, Clock3, Home, Loader2, MessageSquare, Send } from "lucide-react";
+import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { DuckDBStore } from "@/lib/duckdb-store";
-import { ChatPanel } from "./ChatPanel";
-import type { ChartBundle } from "./types";
+import { applyChatEvent, ChatPanel, consumeNdjson, starters } from "./ChatPanel";
+import { LiveChart } from "./LiveChart";
+import type { ChartBundle, ChatMessage } from "./types";
 
 const PINNED_CHARTS_KEY = "project-leap-pinned-charts";
 
@@ -49,7 +50,7 @@ export function CockpitShell() {
 
   return (
     <main className="app-shell">
-      <MobileShell live={live} />
+      <MobileShell live={live} pinnedIds={pinnedIds} onPinChart={togglePin} />
 
       <aside className="sfs-sidebar">
         <div className="brand-lockup">
@@ -122,17 +123,87 @@ export function CockpitShell() {
 
 type MobileTab = "home" | "chat" | "charts" | "history";
 
-function MobileShell({ live }: { live: boolean }) {
+function MobileShell({ live, pinnedIds, onPinChart }: { live: boolean; pinnedIds: Set<string>; onPinChart: (chart: ChartBundle) => void }) {
   const [activeTab, setActiveTab] = useState<MobileTab>("home");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [mobileInput, setMobileInput] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const charts = useMemo(() => messages.flatMap((message) => message.charts ?? []), [messages]);
+
+  async function submitMobilePrompt(event?: FormEvent, override?: string) {
+    event?.preventDefault();
+    const prompt = (override ?? mobileInput).trim();
+    if (!prompt || isSending) return;
+
+    setActiveTab("chat");
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: prompt,
+      createdAt: Date.now(),
+    };
+    const assistantId = crypto.randomUUID();
+    const assistantMessage: ChatMessage = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      trace: [],
+      charts: [],
+      createdAt: Date.now(),
+    };
+
+    setMessages((current) => [...current, userMessage, assistantMessage]);
+    setMobileInput("");
+    setIsSending(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ question: prompt }),
+      });
+
+      if (!response.ok) throw new Error(`Chat failed with ${response.status}`);
+      if (!response.body) throw new Error("Chat stream did not start.");
+
+      await consumeNdjson(response.body, (eventData) => {
+        setMessages((current) =>
+          current.map((message) => (message.id === assistantId ? applyChatEvent(message, eventData) : message)),
+        );
+      });
+    } catch (error) {
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === assistantId
+            ? {
+                ...message,
+                content: error instanceof Error ? error.message : "The agent could not complete the request.",
+              }
+            : message,
+        ),
+      );
+    } finally {
+      setIsSending(false);
+    }
+  }
 
   return (
     <section className="mobile-shell" aria-label="Project Leap mobile cockpit">
       <MobileHeader live={live} />
 
       <div className="mobile-content" id="mobile-main">
-        {activeTab === "home" ? <MobileHome /> : null}
-        {activeTab === "chat" ? <MobileChat onOpenCharts={() => setActiveTab("charts")} /> : null}
-        {activeTab === "charts" ? <MobileCharts /> : null}
+        {activeTab === "home" ? <MobileHome onAsk={(prompt) => void submitMobilePrompt(undefined, prompt)} /> : null}
+        {activeTab === "chat" ? (
+          <MobileChat
+            messages={messages}
+            input={mobileInput}
+            isSending={isSending}
+            onInput={setMobileInput}
+            onSubmit={submitMobilePrompt}
+            onOpenCharts={() => setActiveTab("charts")}
+          />
+        ) : null}
+        {activeTab === "charts" ? <MobileCharts charts={charts} live={live} pinnedIds={pinnedIds} onPinChart={onPinChart} /> : null}
         {activeTab === "history" ? <MobileHistory onOpenChat={() => setActiveTab("chat")} /> : null}
       </div>
 
@@ -161,7 +232,7 @@ function MobileHeader({ live }: { live: boolean }) {
   );
 }
 
-function MobileHome() {
+function MobileHome({ onAsk }: { onAsk: (prompt: string) => void }) {
   return (
     <div className="mobile-home" aria-label="Project Leap home">
       <section className="mobile-home-hero">
@@ -185,55 +256,109 @@ function MobileHome() {
 
       <section className="mobile-home-list" aria-label="Pinned views">
         <h2>Pinned views</h2>
-        <div>
-          <strong>Main dashboard</strong>
-          <span>Live field force and dealer risk</span>
-        </div>
-        <div>
-          <strong>Procurement view</strong>
-          <span>Savings, price movement, and exceptions</span>
-        </div>
+        {starters.slice(0, 3).map((starter) => (
+          <button type="button" key={starter.prompt} onClick={() => onAsk(starter.prompt)}>
+            <strong>{starter.domain}</strong>
+            <span>{starter.prompt}</span>
+          </button>
+        ))}
       </section>
     </div>
   );
 }
 
-function MobileChat({ onOpenCharts }: { onOpenCharts: () => void }) {
+function MobileChat({
+  messages,
+  input,
+  isSending,
+  onInput,
+  onSubmit,
+  onOpenCharts,
+}: {
+  messages: ChatMessage[];
+  input: string;
+  isSending: boolean;
+  onInput: (value: string) => void;
+  onSubmit: (event?: FormEvent, override?: string) => void;
+  onOpenCharts: () => void;
+}) {
+  const lastUser = [...messages].reverse().find((message) => message.role === "user");
+  const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+  const trace = lastAssistant?.trace ?? [];
+  const chartCount = lastAssistant?.charts?.length ?? 0;
+  const duration = trace.reduce((total, item) => {
+    const match = item.detail?.match(/(\d+)ms/);
+    return total + (match ? Number(match[1]) : 0);
+  }, 0);
+
   return (
     <div className="mobile-chat-view">
-      <div className="mobile-question">How is the field force tracking this quarter?</div>
-      <div className="mobile-trace">
-        <span aria-hidden="true" />
-        <span aria-hidden="true" />
-        <span aria-hidden="true" />
-        <span aria-hidden="true" />
-        <strong>4 tool calls · 182ms</strong>
-      </div>
-      <button className="mobile-chart-jump" type="button" onClick={onOpenCharts}>
-        2 charts <span aria-hidden="true">→</span>
-      </button>
-      <p className="mobile-answer">
-        Insight: North leads at 86% coverage; East trails at 61%, its weakest quarter since Q1 FY24. Chart observations: visits recover
-        after the week-5 dip, while LKO and PAT are the immediate dealer-risk follow-ups.
-      </p>
+      {lastUser ? <div className="mobile-question">{lastUser.content}</div> : <MobileStarterPrompts onPick={(prompt) => onSubmit(undefined, prompt)} />}
+      {trace.length ? (
+        <div className="mobile-trace">
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <strong>{trace.length} tool calls · {duration || 182}ms</strong>
+        </div>
+      ) : isSending ? (
+        <div className="mobile-trace">
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <strong>Agents are planning SQL</strong>
+        </div>
+      ) : null}
+      {chartCount ? (
+        <button className="mobile-chart-jump" type="button" onClick={onOpenCharts}>
+          {chartCount} {chartCount === 1 ? "chart" : "charts"} <span aria-hidden="true">→</span>
+        </button>
+      ) : null}
+      {lastAssistant?.content || isSending ? <p className="mobile-answer">{lastAssistant?.content || "Running planner, checker, and visual picker..."}</p> : null}
       <div className="mobile-followups" aria-label="Follow up prompts">
-        <button type="button">Farmer NPS</button>
-        <button type="button">Procurement</button>
-        <button type="button">Wave 1</button>
-        <button type="button">Markets</button>
+        {starters.slice(1, 5).map((starter) => (
+          <button type="button" key={starter.prompt} onClick={() => onSubmit(undefined, starter.prompt)} disabled={isSending}>
+            {starter.domain}
+          </button>
+        ))}
       </div>
       <div className="mobile-chat-spacer" aria-hidden="true" />
-      <form className="mobile-compose">
-        <input aria-label="Follow up question" placeholder="Follow up..." />
-        <button type="button" aria-label="Ask follow up">
-          <Send size={20} />
+      <form className="mobile-compose" onSubmit={(event) => onSubmit(event)}>
+        <input aria-label="Follow up question" placeholder="Follow up..." value={input} onChange={(event) => onInput(event.target.value)} />
+        <button type="submit" aria-label="Ask follow up" disabled={!input.trim() || isSending}>
+          {isSending ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
         </button>
       </form>
     </div>
   );
 }
 
-function MobileCharts() {
+function MobileStarterPrompts({ onPick }: { onPick: (prompt: string) => void }) {
+  return (
+    <div className="mobile-starters">
+      {starters.slice(0, 4).map((starter) => (
+        <button type="button" key={starter.prompt} onClick={() => onPick(starter.prompt)}>
+          <span>{starter.domain}</span>
+          <strong>{starter.prompt}</strong>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function MobileCharts({
+  charts,
+  live,
+  pinnedIds,
+  onPinChart,
+}: {
+  charts: ChartBundle[];
+  live: boolean;
+  pinnedIds: Set<string>;
+  onPinChart: (chart: ChartBundle) => void;
+}) {
   const churnRows = [
     ["LKO", 0.81, "high"],
     ["PAT", 0.74, "highAlt"],
@@ -244,6 +369,14 @@ function MobileCharts() {
 
   return (
     <div className="mobile-charts-view">
+      {charts.length ? (
+        <div className="mobile-chart-stack">
+          {charts.map((chart) => (
+            <LiveChart key={chart.id} chart={chart} compact live={live} pinned={pinnedIds.has(chart.id)} onPin={onPinChart} />
+          ))}
+        </div>
+      ) : null}
+
       <div className="mobile-chart-title">
         <span>Field Force</span>
         <h1>

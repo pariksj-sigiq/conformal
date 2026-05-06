@@ -13,6 +13,7 @@ export type ChartPayload = {
   sql: string;
   spec: TopLevelSpec;
   span: ChartSpan;
+  rows?: Record<string, unknown>[];
 };
 
 export type TraceEvent = {

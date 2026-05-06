@@ -24,6 +24,18 @@ export function runStaticDemoSql(sql: string) {
 }
 
 export function runDemoSql(sql: string, table: TableGetter): Row[] {
+  try {
+    return runGenericSelect(sql, table);
+  } catch {
+    return runTaggedDemoSql(sql, table);
+  }
+}
+
+export function runGeneratedSql(sql: string, table: TableGetter = (name) => demoTables[name] ?? []) {
+  return runGenericSelect(sql, table);
+}
+
+function runTaggedDemoSql(sql: string, table: TableGetter): Row[] {
   const normalized = sql.toLowerCase();
 
   if (normalized.includes("field_force_coverage")) {
@@ -176,4 +188,228 @@ export function runDemoSql(sql: string, table: TableGetter): Row[] {
   }
 
   return table("secondary_sales").slice(0, 100);
+}
+
+type SelectItem = {
+  expression: string;
+  alias: string;
+};
+
+type OrderClause = {
+  key: string;
+  direction: "asc" | "desc";
+};
+
+const CLAUSE_PATTERN = /\b(where|group\s+by|order\s+by|limit)\b/i;
+const AGG_PATTERN = /^(sum|avg|min|max|count)\((\*|[a-zA-Z0-9_]+)\)$/i;
+
+function runGenericSelect(sql: string, table: TableGetter): Row[] {
+  const cleanSql = stripSql(sql);
+  if (!/^select\s+/i.test(cleanSql)) throw new Error("Only SELECT statements are supported.");
+
+  const fromMatch = cleanSql.match(/\sfrom\s+([a-zA-Z0-9_]+)/i);
+  if (!fromMatch?.index) throw new Error("SQL must include FROM <table>.");
+
+  const selectPart = cleanSql.slice("select".length, fromMatch.index).trim();
+  const tableName = fromMatch[1];
+  const rest = cleanSql.slice(fromMatch.index + fromMatch[0].length).trim();
+  const sourceRows = table(tableName);
+  if (!sourceRows.length) throw new Error(`Unknown or empty table: ${tableName}`);
+
+  const clauses = parseClauses(rest);
+  const selectItems = splitTopLevel(selectPart).map(parseSelectItem);
+  const whereRows = clauses.where ? sourceRows.filter((row) => matchesWhere(row, clauses.where ?? "")) : [...sourceRows];
+  const groupKeys = clauses.groupBy ? splitTopLevel(clauses.groupBy).map((key) => key.trim()).filter(Boolean) : [];
+  const hasAggregates = selectItems.some((item) => AGG_PATTERN.test(item.expression));
+
+  let resultRows: Row[];
+  if (groupKeys.length || hasAggregates) {
+    resultRows = aggregateRows(whereRows, selectItems, groupKeys);
+  } else {
+    resultRows = whereRows.map((row) => projectRow(row, selectItems));
+  }
+
+  if (clauses.orderBy) {
+    const order = parseOrder(clauses.orderBy);
+    resultRows.sort((left, right) => compareValues(left[order.key], right[order.key], order.direction));
+  }
+
+  if (clauses.limit) resultRows = resultRows.slice(0, Number(clauses.limit));
+  return resultRows;
+}
+
+function stripSql(sql: string) {
+  const withoutComments = sql
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("--"))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const withoutSemicolon = withoutComments.replace(/;+\s*$/, "");
+  if (!withoutSemicolon || withoutSemicolon.includes(";")) throw new Error("Only one SELECT statement is supported.");
+  return withoutSemicolon;
+}
+
+function parseClauses(rest: string) {
+  const clauses: { where?: string; groupBy?: string; orderBy?: string; limit?: string } = {};
+  let remaining = rest.trim();
+
+  while (remaining) {
+    const match = remaining.match(CLAUSE_PATTERN);
+    if (!match?.index && match?.index !== 0) break;
+
+    const clauseName = match[1].toLowerCase().replace(/\s+/g, " ");
+    const start = match.index + match[0].length;
+    const after = remaining.slice(start).trim();
+    const next = after.search(CLAUSE_PATTERN);
+    const value = (next >= 0 ? after.slice(0, next) : after).trim();
+    remaining = next >= 0 ? after.slice(next).trim() : "";
+
+    if (clauseName === "where") clauses.where = value;
+    if (clauseName === "group by") clauses.groupBy = value;
+    if (clauseName === "order by") clauses.orderBy = value;
+    if (clauseName === "limit") clauses.limit = value.match(/^\d+/)?.[0];
+  }
+
+  return clauses;
+}
+
+function parseSelectItem(rawItem: string): SelectItem {
+  const item = rawItem.trim();
+  const aliasMatch = item.match(/\s+as\s+([a-zA-Z0-9_]+)$/i) ?? item.match(/\s+([a-zA-Z0-9_]+)$/i);
+  if (aliasMatch && aliasMatch.index && aliasMatch.index > 0 && !AGG_PATTERN.test(item)) {
+    const expression = item.slice(0, aliasMatch.index).trim();
+    return { expression, alias: aliasMatch[1] };
+  }
+
+  const expression = aliasMatch && /\s+as\s+/i.test(item) ? item.slice(0, aliasMatch.index).trim() : item;
+  return { expression, alias: aliasMatch && /\s+as\s+/i.test(item) ? aliasMatch[1] : defaultAlias(expression) };
+}
+
+function projectRow(row: Row, items: SelectItem[]): Row {
+  return Object.fromEntries(items.map((item) => [item.alias, valueForExpression(row, item.expression)])) as Row;
+}
+
+function aggregateRows(rows: Row[], items: SelectItem[], groupKeys: string[]): Row[] {
+  const groups = new Map<string, Row[]>();
+  rows.forEach((row) => {
+    const key = groupKeys.map((groupKey) => String(row[groupKey] ?? "")).join("\u001f");
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  });
+
+  if (!groups.size && !groupKeys.length) groups.set("", []);
+
+  return Array.from(groups.values()).map((groupRows) => {
+    const first = groupRows[0] ?? {};
+    return Object.fromEntries(
+      items.map((item) => {
+        const aggregateMatch = item.expression.match(AGG_PATTERN);
+        if (aggregateMatch) return [item.alias, aggregateValue(groupRows, aggregateMatch[1].toLowerCase(), aggregateMatch[2])];
+        return [item.alias, valueForExpression(first, item.expression)];
+      }),
+    ) as Row;
+  });
+}
+
+function aggregateValue(rows: Row[], op: string, column: string) {
+  if (op === "count") return column === "*" ? rows.length : rows.filter((row) => row[column] != null).length;
+  const values = rows.map((row) => Number(row[column] ?? 0)).filter(Number.isFinite);
+  if (!values.length) return 0;
+  if (op === "sum") return roundNumber(values.reduce((total, value) => total + value, 0));
+  if (op === "avg") return roundNumber(values.reduce((total, value) => total + value, 0) / values.length);
+  if (op === "min") return Math.min(...values);
+  if (op === "max") return Math.max(...values);
+  return 0;
+}
+
+function matchesWhere(row: Row, where: string) {
+  return where
+    .split(/\s+and\s+/i)
+    .map((condition) => condition.trim())
+    .filter(Boolean)
+    .every((condition) => matchesCondition(row, condition));
+}
+
+function matchesCondition(row: Row, condition: string) {
+  const inMatch = condition.match(/^([a-zA-Z0-9_]+)\s+in\s+\((.+)\)$/i);
+  if (inMatch) {
+    const values = splitTopLevel(inMatch[2]).map(parseLiteral);
+    return values.some((value) => value === row[inMatch[1]]);
+  }
+
+  const match = condition.match(/^([a-zA-Z0-9_]+)\s*(=|!=|<>|>=|<=|>|<)\s*(.+)$/);
+  if (!match) throw new Error(`Unsupported WHERE condition: ${condition}`);
+  const left = row[match[1]];
+  const right = parseLiteral(match[3]);
+  const operator = match[2];
+
+  if (operator === "=") return left === right;
+  if (operator === "!=" || operator === "<>") return left !== right;
+
+  const leftComparable = comparable(left);
+  const rightComparable = comparable(right);
+  if (operator === ">=") return leftComparable >= rightComparable;
+  if (operator === "<=") return leftComparable <= rightComparable;
+  if (operator === ">") return leftComparable > rightComparable;
+  if (operator === "<") return leftComparable < rightComparable;
+  return false;
+}
+
+function valueForExpression(row: Row, expression: string) {
+  const column = expression.trim();
+  if (column === "*") return JSON.stringify(row);
+  if (!(column in row)) throw new Error(`Unknown column: ${column}`);
+  return row[column];
+}
+
+function parseOrder(orderBy: string): OrderClause {
+  const [key, direction] = orderBy.trim().split(/\s+/);
+  return { key, direction: direction?.toLowerCase() === "desc" ? "desc" : "asc" };
+}
+
+function compareValues(left: unknown, right: unknown, direction: "asc" | "desc") {
+  const result = comparable(left) > comparable(right) ? 1 : comparable(left) < comparable(right) ? -1 : 0;
+  return direction === "desc" ? -result : result;
+}
+
+function comparable(value: unknown) {
+  if (typeof value === "number") return value;
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if (typeof value === "string" && Number.isFinite(Number(value))) return Number(value);
+  return String(value ?? "");
+}
+
+function parseLiteral(raw: string): string | number | boolean {
+  const value = raw.trim().replace(/^['"]|['"]$/g, "");
+  if (/^(true|false)$/i.test(value)) return value.toLowerCase() === "true";
+  if (Number.isFinite(Number(value)) && value !== "") return Number(value);
+  return value;
+}
+
+function splitTopLevel(input: string) {
+  const parts: string[] = [];
+  let current = "";
+  let depth = 0;
+  for (const char of input) {
+    if (char === "(") depth += 1;
+    if (char === ")") depth -= 1;
+    if (char === "," && depth === 0) {
+      parts.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
+}
+
+function defaultAlias(expression: string) {
+  const aggregateMatch = expression.match(AGG_PATTERN);
+  if (aggregateMatch) return `${aggregateMatch[1].toLowerCase()}_${aggregateMatch[2] === "*" ? "rows" : aggregateMatch[2]}`;
+  return expression.replace(/[^a-zA-Z0-9_]+/g, "_");
+}
+
+function roundNumber(value: number) {
+  return Number(value.toFixed(2));
 }

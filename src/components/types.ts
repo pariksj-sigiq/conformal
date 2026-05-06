@@ -18,6 +18,7 @@ export type ChartBundle = {
   spec?: Record<string, unknown>;
   span?: 1 | 2 | 3 | 4;
   generatedAt?: number;
+  rows?: Record<string, unknown>[];
 };
 
 export type ChatMessage = {

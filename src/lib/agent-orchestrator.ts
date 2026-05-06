@@ -1,8 +1,7 @@
 import type { ChartPayload, ChatEvent } from "@/lib/agent-types";
 import { callAzureOpenAi, isAzureOpenAiConfigured } from "@/lib/azure-openai";
 import { dataDictionary } from "@/lib/data-dictionary";
-import { runStaticDemoSql } from "@/lib/demo-query-runner";
-import { scriptedEvents } from "@/lib/hero-queries";
+import { runGeneratedSql } from "@/lib/demo-query-runner";
 import { responseContract, sfsModelContext } from "@/lib/sfs-model-context";
 
 type RouteId = "finance" | "field_force" | "procurement" | "nps" | "microbattle" | "churn" | "commodity" | "sales";
@@ -16,12 +15,15 @@ type PlannerOutput = {
 type CheckerOutput = {
   status?: string;
   route?: string;
+  sql?: string;
   description?: string;
   reason?: string;
 };
 
 type VisualOutput = {
-  chartIds?: string[];
+  chartType?: string;
+  title?: string;
+  description?: string;
   insight?: string;
   chartObservations?: string[];
   watchOut?: string;
@@ -57,106 +59,184 @@ const ROUTE_LABELS: Record<RouteId, string> = {
 const ROUTE_CATALOG = Object.entries(ROUTE_PROMPTS).map(([route, prompt]) => ({ route, example: prompt, primary_table: ROUTE_LABELS[route as RouteId] }));
 
 export async function* agentEvents(message: string, signal?: AbortSignal): AsyncGenerator<ChatEvent> {
-  if (!isAzureOpenAiConfigured()) {
-    yield* scriptedEvents(message);
-    return;
-  }
-
+  const useAzure = isAzureOpenAiConfigured();
   let route = pickLocalRoute(message);
   let planner: PlannerOutput = {};
+  let sql = "";
+  let rows: Record<string, unknown>[] = [];
+  let rowError = "";
 
   yield { type: "tool_start", id: "azure-planner-start", tool: "list_tables", status: "running", label: "Planner agent: selecting dataset and SQL" };
-  try {
-    const result = await timed(() => runPlannerAgent(message, route, signal));
-    planner = result.value;
-    route = sanitizeRoute(planner.route) ?? route;
-    yield {
-      type: "tool_end",
-      id: "azure-planner-end",
-      tool: "list_tables",
-      status: "complete",
-      label: `Planner selected ${ROUTE_LABELS[route]}`,
-      durationMs: result.durationMs,
+  if (!useAzure) {
+    sql = defaultSqlForRoute(route);
+    planner = {
+      route,
+      sql,
+      description: `Local planner selected ${ROUTE_LABELS[route]} and generated SQL for the request.`,
     };
-  } catch {
     yield {
       type: "tool_end",
-      id: "azure-planner-fallback",
+      id: "local-planner-end",
       tool: "list_tables",
       status: "complete",
-      label: `Planner fallback selected ${ROUTE_LABELS[route]}`,
+      label: planner.description ?? `Local planner selected ${ROUTE_LABELS[route]}`,
+      sql,
       durationMs: 0,
     };
+  } else {
+    try {
+      const result = await timed(() => runPlannerAgent(message, route, signal));
+      planner = result.value;
+      route = sanitizeRoute(planner.route) ?? route;
+      sql = sanitizeSql(planner.sql) ?? defaultSqlForRoute(route);
+      yield {
+        type: "tool_end",
+        id: "azure-planner-end",
+        tool: "list_tables",
+        status: "complete",
+        label: planner.description ?? `Planner selected ${ROUTE_LABELS[route]}`,
+        sql,
+        durationMs: result.durationMs,
+      };
+    } catch {
+      sql = defaultSqlForRoute(route);
+      yield {
+        type: "tool_end",
+        id: "azure-planner-fallback",
+        tool: "list_tables",
+        status: "complete",
+        label: `Planner fallback selected ${ROUTE_LABELS[route]}`,
+        sql,
+        durationMs: 0,
+      };
+    }
   }
 
-  let scenarioEvents = scriptedEvents(promptForRoute(route, message));
-  let charts = chartPayloads(scenarioEvents);
-  let previews = previewCharts(charts);
   let checker: CheckerOutput = {};
 
   yield { type: "tool_start", id: "azure-checker-start", tool: "run_sql", status: "running", label: "Checker agent: validating SQL against generated data" };
-  try {
-    const result = await timed(() => runCheckerAgent(message, planner, previews, signal));
-    checker = result.value;
-    const correctedRoute = sanitizeRoute(checker.route);
-    if (correctedRoute && correctedRoute !== route) {
-      route = correctedRoute;
-      scenarioEvents = scriptedEvents(promptForRoute(route, message));
-      charts = chartPayloads(scenarioEvents);
-      previews = previewCharts(charts);
+  const firstRun = runSqlAttempt(sql);
+  rows = firstRun.rows;
+  rowError = firstRun.error;
+
+  if (!useAzure) {
+    if (rowError) {
+      sql = defaultSqlForRoute(route);
+      const fallbackRun = runSqlAttempt(sql);
+      rows = fallbackRun.rows;
+      rowError = fallbackRun.error;
     }
 
     yield {
       type: "tool_end",
-      id: "azure-checker-end",
+      id: "local-checker-end",
       tool: "run_sql",
-      status: "complete",
-      label: checker.description ?? checker.reason ?? `Checker accepted ${ROUTE_LABELS[route]} at ${previews[0]?.rowCount ?? 0} rows`,
-      durationMs: result.durationMs,
-    };
-  } catch {
-    yield {
-      type: "tool_end",
-      id: "azure-checker-fallback",
-      tool: "run_sql",
-      status: "complete",
-      label: `Checker fallback accepted ${ROUTE_LABELS[route]}`,
+      status: rowError ? "error" : "complete",
+      label: rowError ? `SQL failed: ${rowError}` : `Checker ran ${rows.length} rows from ${ROUTE_LABELS[route]}`,
+      sql,
       durationMs: 0,
     };
+  } else {
+    try {
+      const result = await timed(() => runCheckerAgent(message, planner, sql, rows, rowError, signal));
+      checker = result.value;
+      const correctedRoute = sanitizeRoute(checker.route);
+      route = correctedRoute ?? route;
+      const correctedSql = sanitizeSql(checker.sql);
+      if (correctedSql && correctedSql !== sql) {
+        sql = correctedSql;
+        const correctedRun = runSqlAttempt(sql);
+        rows = correctedRun.rows;
+        rowError = correctedRun.error;
+      }
+
+      if (rowError) throw new Error(rowError);
+
+      yield {
+        type: "tool_end",
+        id: "azure-checker-end",
+        tool: "run_sql",
+        status: "complete",
+        label: checker.description ?? checker.reason ?? `Checker ran ${rows.length} rows from ${ROUTE_LABELS[route]}`,
+        sql,
+        durationMs: result.durationMs,
+      };
+    } catch {
+      if (rowError) {
+        sql = defaultSqlForRoute(route);
+        const fallbackRun = runSqlAttempt(sql);
+        rows = fallbackRun.rows;
+        rowError = fallbackRun.error;
+      }
+
+      yield {
+        type: "tool_end",
+        id: "azure-checker-fallback",
+        tool: "run_sql",
+        status: "complete",
+        label: rowError ? `Checker fallback could not run SQL: ${rowError}` : `Checker fallback ran ${rows.length} rows from ${ROUTE_LABELS[route]}`,
+        sql,
+        durationMs: 0,
+      };
+    }
   }
 
   let visual: VisualOutput = {};
+  let chart = buildChartFromRows({
+    id: `agent-${route}-${Date.now()}`,
+    title: titleForRoute(route),
+    description: planner.description ?? checker.description ?? `Generated from ${ROUTE_LABELS[route]}`,
+    chartType: inferChartType(rows),
+    sql,
+    rows,
+  });
 
   yield { type: "tool_start", id: "azure-visual-start", tool: "render_chart", status: "running", label: "Visual picker: choosing chart set and briefing copy" };
-  try {
-    const result = await timed(() => runVisualAgent(message, checker, charts, previews, signal));
-    visual = result.value;
-    charts = orderCharts(charts, visual.chartIds);
-
+  if (!useAzure) {
     yield {
       type: "tool_end",
-      id: "azure-visual-end",
+      id: "local-visual-end",
       tool: "render_chart",
       status: "complete",
-      label: `Visual picker selected ${charts.map((chart) => chart.title).join(" + ")}`,
-      durationMs: result.durationMs,
-    };
-  } catch {
-    yield {
-      type: "tool_end",
-      id: "azure-visual-fallback",
-      tool: "render_chart",
-      status: "complete",
-      label: "Visual picker fallback used the curated demo chart set",
+      label: `Visual picker rendered ${chart.title} from executed rows`,
       durationMs: 0,
     };
+  } else {
+    try {
+      const result = await timed(() => runVisualAgent(message, checker, sql, rows, signal));
+      visual = result.value;
+      chart = buildChartFromRows({
+        id: chart.id,
+        title: visual.title ?? chart.title,
+        description: visual.description ?? chart.narrative,
+        chartType: visual.chartType ?? inferChartType(rows),
+        sql,
+        rows,
+      });
+
+      yield {
+        type: "tool_end",
+        id: "azure-visual-end",
+        tool: "render_chart",
+        status: "complete",
+        label: `Visual picker selected ${chart.title}`,
+        durationMs: result.durationMs,
+      };
+    } catch {
+      yield {
+        type: "tool_end",
+        id: "azure-visual-fallback",
+        tool: "render_chart",
+        status: "complete",
+        label: "Visual picker fallback used the executed SQL result",
+        durationMs: 0,
+      };
+    }
   }
 
-  for (const chart of charts) {
-    yield { type: "chart", chart };
-  }
+  yield { type: "chart", chart };
 
-  yield finalEventFromVisual(visual) ?? fallbackFinal(scenarioEvents);
+  yield finalEventFromVisual(visual) ?? fallbackFinalFromRows(route, rows);
 }
 
 function pickLocalRoute(prompt: string): RouteId {
@@ -175,11 +255,6 @@ function pickLocalRoute(prompt: string): RouteId {
   return "sales";
 }
 
-function promptForRoute(route: RouteId, originalPrompt: string) {
-  if (route === "finance" && /\b(revenue|sales|ebitda|pbd?t|profit|margin)\b/i.test(originalPrompt)) return originalPrompt;
-  return ROUTE_PROMPTS[route];
-}
-
 async function runPlannerAgent(message: string, localRoute: RouteId, signal?: AbortSignal) {
   const text = await callAzureOpenAi(
     [
@@ -189,9 +264,12 @@ async function runPlannerAgent(message: string, localRoute: RouteId, signal?: Ab
         content: [
           "Select the best route and primary SQL for this user question.",
           "Return JSON only with keys: route, sql, description.",
-          "Do not invent tables. Choose route from this catalog:",
+          "Do not invent tables. Choose route from this catalog, then write a real SQL SELECT over the table columns.",
+          "Supported SQL: SELECT columns and SUM/AVG/MIN/MAX/COUNT aggregates, FROM one table, optional WHERE with AND, optional GROUP BY, ORDER BY, LIMIT.",
+          "Do not use joins, CTEs, date functions, window functions, QUALIFY, NULLIF, arithmetic expressions, or table aliases.",
           JSON.stringify(ROUTE_CATALOG, null, 2),
           `Local fallback route: ${localRoute}`,
+          `Data dictionary: ${JSON.stringify(dataDictionary, null, 2)}`,
           `Question: ${message}`,
         ].join("\n\n"),
       },
@@ -201,7 +279,7 @@ async function runPlannerAgent(message: string, localRoute: RouteId, signal?: Ab
   return parseJson<PlannerOutput>(text);
 }
 
-async function runCheckerAgent(message: string, planner: PlannerOutput, previews: ReturnType<typeof previewCharts>, signal?: AbortSignal) {
+async function runCheckerAgent(message: string, planner: PlannerOutput, sql: string, rows: Record<string, unknown>[], error: string, signal?: AbortSignal) {
   const text = await callAzureOpenAi(
     [
       { role: "system", content: jsonAgentSystem("SQL checker agent") },
@@ -209,11 +287,15 @@ async function runCheckerAgent(message: string, planner: PlannerOutput, previews
         role: "user",
         content: [
           "Validate whether the planner selected the right route and dataset for the user question.",
-          "Return JSON only with keys: status, route, description, reason.",
-          "Use the same route if correct. Use a corrected route only if the selected data cannot answer the question.",
+          "Return JSON only with keys: status, route, sql, description, reason.",
+          "If the SQL errored, return corrected SQL using the supported SQL subset.",
+          "If the SQL ran but does not answer the question, return corrected route and SQL.",
           `Question: ${message}`,
           `Planner output: ${JSON.stringify(planner, null, 2)}`,
-          `Executed dataset previews: ${JSON.stringify(previews, null, 2)}`,
+          `SQL executed: ${sql}`,
+          `Execution error: ${error || "none"}`,
+          `Rows returned: ${rows.length}`,
+          `Sample rows: ${JSON.stringify(rows.slice(0, 8), null, 2)}`,
         ].join("\n\n"),
       },
     ],
@@ -222,20 +304,23 @@ async function runCheckerAgent(message: string, planner: PlannerOutput, previews
   return parseJson<CheckerOutput>(text);
 }
 
-async function runVisualAgent(message: string, checker: CheckerOutput, charts: ChartPayload[], previews: ReturnType<typeof previewCharts>, signal?: AbortSignal) {
+async function runVisualAgent(message: string, checker: CheckerOutput, sql: string, rows: Record<string, unknown>[], signal?: AbortSignal) {
   const text = await callAzureOpenAi(
     [
       { role: "system", content: jsonAgentSystem("visual picker and executive narrative agent") },
       {
         role: "user",
         content: [
-          "Pick the best charts from the candidates and write the final executive answer.",
-          "Return JSON only with keys: chartIds, insight, chartObservations, watchOut.",
-          "chartObservations must be an array of 2-3 strings. chartIds must only contain candidate ids.",
+          "Pick the best chart type for the executed result and write the final executive answer.",
+          "Return JSON only with keys: title, description, chartType, insight, chartObservations, watchOut.",
+          "chartType must be one of line, area, bar, horizontal-bar, scatter.",
+          "chartObservations must be an array of 2-3 strings.",
           `Question: ${message}`,
           `Checker output: ${JSON.stringify(checker, null, 2)}`,
-          `Chart candidates: ${JSON.stringify(charts.map(({ id, title, narrative, sql }) => ({ id, title, narrative, sql })), null, 2)}`,
-          `Executed data previews: ${JSON.stringify(previews, null, 2)}`,
+          `SQL: ${sql}`,
+          `Rows returned: ${rows.length}`,
+          `Columns: ${JSON.stringify(Object.keys(rows[0] ?? {}))}`,
+          `Sample rows: ${JSON.stringify(rows.slice(0, 12), null, 2)}`,
         ].join("\n\n"),
       },
     ],
@@ -254,33 +339,6 @@ function jsonAgentSystem(agentName: string) {
   ].join("\n\n");
 }
 
-function chartPayloads(events: ChatEvent[]) {
-  return events.flatMap((event) => (event.type === "chart" ? [event.chart] : []));
-}
-
-function previewCharts(charts: ChartPayload[]) {
-  return charts.map((chart) => {
-    const rows = runStaticDemoSql(chart.sql);
-    return {
-      chartId: chart.id,
-      title: chart.title,
-      sql: chart.sql,
-      rowCount: rows.length,
-      columns: Object.keys(rows[0] ?? {}),
-      sample: rows.slice(0, 6),
-    };
-  });
-}
-
-function orderCharts(charts: ChartPayload[], chartIds: unknown) {
-  if (!Array.isArray(chartIds) || !chartIds.length) return charts;
-  const requested = chartIds.map(String);
-  const byId = new Map(charts.map((chart) => [chart.id, chart]));
-  const ordered = requested.map((id) => byId.get(id)).filter(Boolean) as ChartPayload[];
-  const remaining = charts.filter((chart) => !requested.includes(chart.id));
-  return ordered.length ? [...ordered, ...remaining] : charts;
-}
-
 function finalEventFromVisual(visual: VisualOutput): ChatEvent | null {
   if (!visual.insight || !Array.isArray(visual.chartObservations) || !visual.chartObservations.length) return null;
   return {
@@ -295,10 +353,14 @@ function finalEventFromVisual(visual: VisualOutput): ChatEvent | null {
   };
 }
 
-function fallbackFinal(events: ChatEvent[]): ChatEvent {
-  return events.find((event): event is Extract<ChatEvent, { type: "final" }> => event.type === "final") ?? {
+function fallbackFinalFromRows(route: RouteId, rows: Record<string, unknown>[]): ChatEvent {
+  const columns = Object.keys(rows[0] ?? {});
+  return {
     type: "final",
-    text: "Insight: The query completed, but the agent did not return a final narrative.\n\nChart observations:\n- Review the rendered chart for the selected data cut.",
+    text: [
+      `Insight: The agents executed a live SQL query against ${ROUTE_LABELS[route]} and returned ${rows.length} rows for analysis.`,
+      `Chart observations:\n- The rendered chart uses the actual result columns: ${columns.join(", ") || "none"}.\n- Use the trace to inspect the exact SQL that produced this chart.`,
+    ].join("\n\n"),
   };
 }
 
@@ -306,6 +368,107 @@ function sanitizeRoute(route: unknown): RouteId | null {
   if (typeof route !== "string") return null;
   const normalized = route.toLowerCase().replace(/[\s-]+/g, "_");
   return normalized in ROUTE_LABELS ? (normalized as RouteId) : null;
+}
+
+function sanitizeSql(sql: unknown) {
+  if (typeof sql !== "string") return null;
+  const trimmed = sql.trim();
+  if (!/^select\b/i.test(trimmed)) return null;
+  if (trimmed.replace(/;+\s*$/, "").includes(";")) return null;
+  return trimmed;
+}
+
+function runSqlAttempt(sql: string) {
+  try {
+    const rows = runGeneratedSql(sql) as Record<string, unknown>[];
+    return { rows, error: "" };
+  } catch (error) {
+    return { rows: [] as Record<string, unknown>[], error: error instanceof Error ? error.message : "SQL failed" };
+  }
+}
+
+function defaultSqlForRoute(route: RouteId) {
+  const sqlByRoute: Record<RouteId, string> = {
+    finance: "SELECT month, revenue_cr, ebitda_cr, ebitda_margin_pct FROM financial_performance ORDER BY month LIMIT 24",
+    field_force: "SELECT region, SUM(visits_planned) AS planned, SUM(visits_done) AS actual, SUM(orders_booked) AS orders FROM field_force_activity WHERE date >= '2026-02-01' GROUP BY region ORDER BY actual DESC LIMIT 10",
+    procurement: "SELECT category, SUM(spend) AS spend, SUM(savings_vs_baseline) AS savings FROM procurement_spend GROUP BY category ORDER BY savings DESC LIMIT 10",
+    nps: "SELECT quarter, region, AVG(nps) AS nps FROM farmer_nps GROUP BY quarter, region ORDER BY quarter LIMIT 50",
+    microbattle: "SELECT name, owner_function, status, percent_complete FROM wave1_microbattles ORDER BY percent_complete ASC LIMIT 12",
+    churn: "SELECT dealer_id, tier, ytd_sales, payment_dso, churn_risk FROM channel_partners WHERE region = 'North' ORDER BY churn_risk DESC LIMIT 12",
+    commodity: "SELECT commodity, AVG(price_inr) AS price_inr, AVG(dod_change_pct) AS dod_change_pct FROM commodity_prices GROUP BY commodity ORDER BY dod_change_pct DESC LIMIT 10",
+    sales: "SELECT region, SUM(revenue_inr) AS revenue_inr, SUM(units) AS units FROM secondary_sales WHERE date >= '2026-04-01' GROUP BY region ORDER BY revenue_inr DESC LIMIT 10",
+  };
+  return sqlByRoute[route];
+}
+
+function titleForRoute(route: RouteId) {
+  const titles: Record<RouteId, string> = {
+    finance: "Financial performance trend",
+    field_force: "Field-force execution",
+    procurement: "Procurement performance",
+    nps: "Farmer NPS analysis",
+    microbattle: "Wave 1 execution status",
+    churn: "Channel-partner churn risk",
+    commodity: "Commodity market movement",
+    sales: "Revenue analysis",
+  };
+  return titles[route];
+}
+
+function buildChartFromRows(input: {
+  id: string;
+  title: string;
+  description: string;
+  chartType: string;
+  sql: string;
+  rows: Record<string, unknown>[];
+}): ChartPayload {
+  const mark = markForChartType(input.chartType);
+  const columns = Object.keys(input.rows[0] ?? {});
+  const xField = columns.find((column) => !input.rows.some((row) => isNumeric(row[column]))) ?? columns[0] ?? "category";
+  const yField = columns.find((column) => column !== xField && input.rows.some((row) => isNumeric(row[column]))) ?? columns[1] ?? "value";
+
+  return {
+    id: input.id,
+    title: input.title,
+    narrative: input.description,
+    sql: input.sql,
+    span: 3,
+    rows: input.rows,
+    spec: {
+      data: { name: "data" },
+      mark,
+      encoding: {
+        x: { field: xField, type: isDateLike(input.rows[0]?.[xField]) ? "temporal" : "nominal" },
+        y: { field: yField, type: "quantitative" },
+      },
+    },
+  };
+}
+
+function markForChartType(chartType: string) {
+  const normalized = chartType.toLowerCase();
+  if (normalized.includes("scatter")) return { type: "circle", tooltip: true } as const;
+  if (normalized.includes("bar")) return { type: "bar", tooltip: true } as const;
+  if (normalized.includes("area")) return { type: "area", tooltip: true } as const;
+  return { type: "line", point: true, tooltip: true } as const;
+}
+
+function inferChartType(rows: Record<string, unknown>[]) {
+  const columns = Object.keys(rows[0] ?? {});
+  const hasTime = columns.some((column) => rows.some((row) => isDateLike(row[column])));
+  const numericCount = columns.filter((column) => rows.some((row) => isNumeric(row[column]))).length;
+  if (hasTime && numericCount >= 1) return "line";
+  if (numericCount >= 2 && rows.length <= 30) return "scatter";
+  return "bar";
+}
+
+function isNumeric(value: unknown) {
+  return typeof value === "number" || (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value)));
+}
+
+function isDateLike(value: unknown) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value);
 }
 
 async function timed<T>(fn: () => Promise<T>): Promise<TimedResult<T>> {

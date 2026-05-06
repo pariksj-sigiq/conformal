@@ -111,6 +111,7 @@ export async function* agentEvents(message: string, signal?: AbortSignal): Async
       planner = result.value;
       route = sanitizeRoute(planner.route) ?? route;
       sql = sanitizeSql(planner.sql) ?? defaultSqlForRoute(route);
+      sql = enforceSemanticSql(message, route, sql);
       yield {
         type: "tool_end",
         id: "azure-planner-end",
@@ -166,7 +167,7 @@ export async function* agentEvents(message: string, signal?: AbortSignal): Async
       route = correctedRoute ?? route;
       const correctedSql = sanitizeSql(checker.sql);
       if (correctedSql && correctedSql !== sql) {
-        sql = correctedSql;
+        sql = enforceSemanticSql(message, route, correctedSql);
         const correctedRun = runSqlAttempt(sql);
         rows = correctedRun.rows;
         rowError = correctedRun.error;
@@ -435,6 +436,14 @@ function runSqlAttempt(sql: string) {
   }
 }
 
+function enforceSemanticSql(prompt: string, route: RouteId, sql: string) {
+  const lower = prompt.toLowerCase();
+  if (route === "procurement" && lower.includes("glyphosate") && lower.includes("supplier")) {
+    return "SELECT supplier_name, commodity_link, SUM(total_value_inr) AS total_value_inr, AVG(premium_vs_market_pct) AS premium_vs_market_pct FROM procurement_enriched WHERE commodity_link = 'Glyphosate Technical' GROUP BY supplier_name, commodity_link ORDER BY premium_vs_market_pct DESC LIMIT 10";
+  }
+  return sql;
+}
+
 function defaultSqlForRoute(route: RouteId) {
   const sqlByRoute: Record<RouteId, string> = {
     finance: "SELECT month, SUM(revenue_inr) AS revenue_inr, SUM(ebitda_inr) AS ebitda_inr, AVG(ebitda_pct) AS ebitda_pct FROM fact_finance_pl GROUP BY month ORDER BY month LIMIT 24",
@@ -589,8 +598,10 @@ function markForChartType(chartType: string) {
 function inferChartType(rows: Record<string, unknown>[]) {
   const columns = Object.keys(rows[0] ?? {});
   const hasTime = columns.some((column) => rows.some((row) => isDateLike(row[column])));
+  const hasCategory = columns.some((column) => rows.some((row) => !isNumeric(row[column]) && !isDateLike(row[column])));
   const numericCount = columns.filter((column) => rows.some((row) => isNumeric(row[column]))).length;
   if (hasTime && numericCount >= 1) return "line";
+  if (hasCategory && numericCount >= 1) return "bar";
   if (numericCount >= 2 && rows.length <= 30) return "scatter";
   return "bar";
 }

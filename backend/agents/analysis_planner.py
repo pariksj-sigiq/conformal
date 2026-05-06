@@ -45,6 +45,30 @@ def _local_plan(interpreted_question: str) -> Plan:
     asks_ebitda = any(token in lower for token in ("ebitda", "pbdt", "profit", "margin"))
     asks_time = any(token in lower for token in ("time series", "trend", "month", "monthly", "over time"))
     asks_last_two_quarters = "last two quarter" in lower or "last 2 quarter" in lower
+    asks_procurement = any(token in lower for token in ("procurement", "supplier", "purchase", "po ", "savings", "premium vs market"))
+    asks_fy26_ytd = any(token in lower for token in ("fy26 year-to-date", "fy26 ytd", "year-to-date", "ytd"))
+
+    if asks_procurement:
+        filters = {"fiscal_year": "FY26"} if asks_fy26_ytd or "fy26" in lower else {}
+        return Plan(
+            analyses=[
+                Analysis(
+                    analysis_id="procurement_1",
+                    purpose="Compare procurement value and savings against market price by material category",
+                    type="breakdown",
+                    tables_needed=["procurement_enriched"],
+                    filters=filters,
+                    measures=[
+                        "SUM(total_value_inr) / 10000000 AS spend_cr",
+                        "SUM((market_spot_price_inr - contracted_price_inr) * qty) / 10000000 AS savings_vs_market_cr",
+                        "AVG(premium_vs_market_pct) AS premium_vs_market_pct",
+                    ],
+                    dimensions=["material_category"],
+                    expected_output_shape="Material-category rows with spend, savings against market, and average premium percentage",
+                )
+            ],
+            plan_rationale="Used the local procurement planning fallback after the LLM provider rejected or under-specified a safe business prompt.",
+        )
 
     if asks_revenue or asks_ebitda or asks_last_two_quarters:
         measures = []

@@ -8,8 +8,9 @@ function encode(event: ChatEvent) {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as { message?: string; question?: string };
+  const body = (await request.json().catch(() => ({}))) as { message?: string; question?: string; history?: unknown };
   const message = body.message ?? body.question ?? "";
+  const history = normalizeHistory(body.history);
   const backendUrl = backendBaseUrl();
 
   const stream = new ReadableStream({
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
 
       if (backendUrl) {
         try {
-          for await (const event of eceoBackendEvents(backendUrl, message, request.signal)) {
+          for await (const event of eceoBackendEvents(backendUrl, message, history, request.signal)) {
             write(event);
           }
           controller.close();
@@ -61,13 +62,28 @@ function backendBaseUrl() {
   return (process.env.ECEO_BACKEND_URL ?? process.env.BACKEND_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "");
 }
 
-async function* eceoBackendEvents(baseUrl: string, question: string, signal?: AbortSignal): AsyncGenerator<ChatEvent> {
+type BackendHistoryMessage = { role: "user" | "assistant"; content: string };
+
+function normalizeHistory(history: unknown): BackendHistoryMessage[] {
+  if (!Array.isArray(history)) return [];
+  return history
+    .flatMap((item): BackendHistoryMessage[] => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+      const record = item as Record<string, unknown>;
+      const role = record.role === "assistant" ? "assistant" : record.role === "user" ? "user" : null;
+      const content = typeof record.content === "string" ? record.content.trim() : "";
+      return role && content ? [{ role, content }] : [];
+    })
+    .slice(-8);
+}
+
+async function* eceoBackendEvents(baseUrl: string, question: string, history: BackendHistoryMessage[], signal?: AbortSignal): AsyncGenerator<ChatEvent> {
   yield trace("eceo-interpreter-start", "list_tables", "running", "Interpreter agent: clarifying business intent");
 
   const response = await fetch(`${baseUrl}/query/stream`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ question, history: [] }),
+    body: JSON.stringify({ question, history }),
     signal,
   });
 

@@ -17,7 +17,7 @@ from backend.agents import query_executor as executor_agent
 from backend.agents.interpreter import interpret
 from backend.agents.presentation import design
 from backend.agents.query_executor import execute
-from backend.contracts import Analysis, Plan, QueryResult
+from backend.contracts import Analysis, Message, Plan, QueryResult
 from backend.duckdb_loader import open_database
 
 requires_api = pytest.mark.skipif(
@@ -55,6 +55,31 @@ def test_interpreter_falls_back_on_azure_content_filter(monkeypatch: pytest.Monk
     assert any("Q3 FY26 and Q4 FY26" in assumption for assumption in result.implicit_assumptions)
 
 
+def test_interpreter_contextualizes_period_followup_on_fallback(monkeypatch: pytest.MonkeyPatch):
+    def blocked(*_args, **_kwargs):
+        raise RuntimeError("Azure OpenAI 400: content_filter")
+
+    monkeypatch.setattr(interpreter_agent, "complete_json", blocked)
+
+    result = interpret(
+        "FY26 year-to-date",
+        [
+            Message(
+                role="user",
+                content="Show me procurement savings vs target by category.",
+            ),
+            Message(
+                role="assistant",
+                content="Which time period should procurement savings vs target be shown for?",
+            ),
+        ],
+    )
+
+    assert result.intent_understood is True
+    assert "procurement savings" in (result.interpreted_question or "").lower()
+    assert "FY26 year-to-date" in (result.interpreted_question or "")
+
+
 def test_planner_falls_back_on_azure_content_filter(monkeypatch: pytest.MonkeyPatch):
     def blocked(*_args, **_kwargs):
         raise RuntimeError("Azure OpenAI 400: content_filter")
@@ -65,6 +90,20 @@ def test_planner_falls_back_on_azure_content_filter(monkeypatch: pytest.MonkeyPa
 
     assert result.analyses[0].tables_needed == ["fact_finance_pl"]
     assert result.analyses[0].filters["fiscal_quarter"] == "Q3|Q4"
+
+
+def test_planner_procurement_fallback_for_ytd(monkeypatch: pytest.MonkeyPatch):
+    def blocked(*_args, **_kwargs):
+        raise RuntimeError("Azure OpenAI 400: content_filter")
+
+    monkeypatch.setattr(planner_agent, "complete_json", blocked)
+
+    result = run_plan("Show me procurement savings vs target by category. Time period: FY26 year-to-date")
+
+    analysis = result.analyses[0]
+    assert analysis.tables_needed == ["procurement_enriched"]
+    assert analysis.filters == {"fiscal_year": "FY26"}
+    assert "savings_vs_market_cr" in " ".join(analysis.measures)
 
 
 def test_executor_falls_back_on_azure_content_filter(monkeypatch: pytest.MonkeyPatch):

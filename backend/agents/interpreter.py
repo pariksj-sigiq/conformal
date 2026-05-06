@@ -12,9 +12,9 @@ from backend.llm import complete_json
 from backend.prompts import load_prompt
 
 
-def _local_interpretation(question: str) -> InterpretationResult:
+def _local_interpretation(question: str, history: list[Message] | None = None) -> InterpretationResult:
     """Conservative fallback when the LLM refuses a harmless business prompt."""
-    cleaned = " ".join(question.split()).strip()
+    cleaned = _contextual_question(" ".join(question.split()).strip(), history or [])
     if not cleaned:
         return InterpretationResult(
             intent_understood=False,
@@ -49,6 +49,22 @@ def _can_use_local_fallback(error: Exception) -> bool:
     return "content_filter" in message or "too many requests" in message or "429" in message
 
 
+def _contextual_question(question: str, history: list[Message]) -> str:
+    lower = question.lower()
+    period_only = bool(
+        history
+        and any(token in lower for token in ("fy26", "q4", "q3", "year-to-date", "ytd", "full year", "custom period"))
+        and not any(token in lower for token in ("revenue", "ebitda", "procurement", "sales", "nps", "field force", "churn"))
+    )
+    if not period_only:
+        return question
+
+    last_user = next((message.content for message in reversed(history) if message.role == "user"), "")
+    if not last_user:
+        return question
+    return f"{last_user} Time period: {question}"
+
+
 def interpret(question: str, history: list[Message] | None = None) -> InterpretationResult:
     system = load_prompt("interpreter")
     history = history or []
@@ -61,6 +77,6 @@ def interpret(question: str, history: list[Message] | None = None) -> Interpreta
         raw = complete_json(system, user, max_tokens=1024)
     except RuntimeError as exc:
         if _can_use_local_fallback(exc):
-            return _local_interpretation(question)
+            return _local_interpretation(question, history)
         raise
     return InterpretationResult.model_validate(raw)

@@ -141,10 +141,14 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
     setIsSending(true);
 
     try {
+      const history = messages
+        .filter((message) => (message.role === "user" || message.role === "assistant") && message.content.trim())
+        .map((message) => ({ role: message.role, content: message.content.trim() }));
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question: prompt }),
+        body: JSON.stringify({ question: prompt, history }),
       });
 
       if (!response.ok) throw new Error(`Chat failed with ${response.status}`);
@@ -613,6 +617,25 @@ export function applyChatEvent(message: ChatMessage, eventData: Record<string, u
   if (type === "final" || type === "message" || type === "narrative") {
     const content = String(eventData.content ?? eventData.text ?? eventData.narrative ?? eventData.answer ?? "");
     return { ...message, content: [message.content, content].filter(Boolean).join(message.content ? "\n\n" : "") };
+  }
+
+  if (type === "error") {
+    const content = String(eventData.message ?? eventData.detail ?? "The agent could not complete the request.");
+    return {
+      ...message,
+      content: [message.content, content].filter(Boolean).join(message.content ? "\n\n" : ""),
+      trace: [
+        ...(message.trace ?? []),
+        {
+          id: String(eventData.id ?? crypto.randomUUID()),
+          type: "error",
+          label: "Agent error",
+          status: "error",
+          detail: content,
+          timestamp: Date.now(),
+        },
+      ],
+    };
   }
 
   const trace: TraceEvent = {

@@ -158,7 +158,9 @@ def _can_use_local_fallback(error: Exception) -> bool:
 
 
 def _local_presentation(interpreted_question: str, results: list[QueryResult]) -> Presentation:
-    successful = next((result for result in results if result.success and result.rows), None)
+    successful = next((result for result in results if result.success and len(result.rows) > 1), None)
+    if not successful:
+        successful = next((result for result in results if result.success and result.rows), None)
     if not successful:
         return Presentation(
             narrative="I could not produce a usable result from the executed analyses.",
@@ -193,6 +195,10 @@ def _local_presentation(interpreted_question: str, results: list[QueryResult]) -
 
 def _title_for_result(question: str, result: QueryResult) -> str:
     lower = question.lower()
+    if "procurement" in lower or "savings" in lower:
+        if any("material_category" in row for row in result.rows):
+            return "Procurement savings by category"
+        return "Procurement savings summary"
     if "revenue" in lower and "ebitda" in lower:
         return "Revenue and EBITDA analysis"
     if "revenue" in lower or "sales" in lower:
@@ -204,7 +210,12 @@ def _chart_options(chart_type: str, columns: list[str], numeric_columns: list[st
     if chart_type not in {"line_chart", "bar_chart"}:
         return None
     x_field = "month" if "month" in columns else next((column for column in columns if column not in numeric_columns), columns[0] if columns else "")
-    y_field = next((column for column in numeric_columns if "revenue" in column.lower()), numeric_columns[0] if numeric_columns else "")
+    y_field = (
+        next((column for column in numeric_columns if "savings" in column.lower()), None)
+        or next((column for column in numeric_columns if "revenue" in column.lower()), None)
+        or next((column for column in numeric_columns if "spend" in column.lower()), None)
+        or (numeric_columns[0] if numeric_columns else "")
+    )
     return {"x_field": x_field, "y_field": y_field}
 
 
@@ -217,6 +228,29 @@ def _narrative_from_rows(
         return "The analysis ran, but it returned no rows."
     if not numeric_columns:
         return f"The analysis returned {len(rows)} rows from the workbook."
+
+    if any("material_category" in row for row in rows):
+        savings_key = next((column for column in numeric_columns if "savings" in column.lower()), None)
+        spend_key = next((column for column in numeric_columns if "spend" in column.lower()), None)
+        premium_key = next((column for column in numeric_columns if "premium" in column.lower()), None)
+        if savings_key:
+            sorted_rows = sorted(rows, key=lambda row: float(row.get(savings_key) or 0))
+            worst = sorted_rows[0]
+            best = sorted_rows[-1]
+            total_savings = sum(float(row.get(savings_key) or 0) for row in rows)
+            parts = [
+                f"FY26 procurement is at {_format_value(savings_key, total_savings)} versus market across the returned categories.",
+                f"{worst.get('material_category')} is the largest drag at {_format_value(savings_key, float(worst.get(savings_key) or 0))}.",
+            ]
+            if best is not worst and float(best.get(savings_key) or 0) > 0:
+                parts.append(f"{best.get('material_category')} is the strongest savings pocket at {_format_value(savings_key, float(best.get(savings_key) or 0))}.")
+            if spend_key:
+                total_spend = sum(float(row.get(spend_key) or 0) for row in rows)
+                parts.append(f"Total category spend in scope is {_format_value(spend_key, total_spend)}.")
+            if premium_key:
+                avg_premium = sum(float(row.get(premium_key) or 0) for row in rows) / len(rows)
+                parts.append(f"Average premium versus market is {_format_value(premium_key, avg_premium)}.")
+            return " ".join(parts)
 
     first = rows[0]
     last = rows[-1]

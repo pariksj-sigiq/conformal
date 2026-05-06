@@ -170,6 +170,40 @@ def test_presentation_falls_back_on_timeout(monkeypatch: pytest.MonkeyPatch):
     assert presentation.layout[0].analysis_id == "finance_1"
 
 
+def test_presentation_fallback_prefers_category_breakdown(monkeypatch: pytest.MonkeyPatch):
+    def timed_out(*_args, **_kwargs):
+        raise TimeoutError("The read operation timed out")
+
+    monkeypatch.setattr(presentation_agent, "complete_text", timed_out)
+
+    plan_obj = Plan(analyses=[], plan_rationale="test")
+    aggregate = QueryResult(
+        analysis_id="a1",
+        sql="SELECT ...",
+        success=True,
+        rows=[{"savings_vs_market_cr": -0.5, "procurement_spend_cr": 12.0}],
+        columns=["savings_vs_market_cr", "procurement_spend_cr"],
+        row_count=1,
+    )
+    breakdown = QueryResult(
+        analysis_id="a2",
+        sql="SELECT ... GROUP BY material_category",
+        success=True,
+        rows=[
+            {"material_category": "Glyphosate Technical", "savings_vs_market_cr": -0.4, "procurement_spend_cr": 6.0, "premium_vs_market_pct": 5.0},
+            {"material_category": "Atrazine Technical", "savings_vs_market_cr": 0.1, "procurement_spend_cr": 2.0, "premium_vs_market_pct": -1.0},
+        ],
+        columns=["material_category", "savings_vs_market_cr", "procurement_spend_cr", "premium_vs_market_pct"],
+        row_count=2,
+    )
+
+    presentation = design("Show me procurement savings vs target by category", plan_obj, [aggregate, breakdown])
+
+    assert presentation.layout[0].analysis_id == "a2"
+    assert presentation.layout[0].title == "Procurement savings by category"
+    assert "Glyphosate Technical" in presentation.narrative
+
+
 @requires_api
 def test_planner_q5_returns_3_to_4_analyses():
     interpreted = (

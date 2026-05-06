@@ -213,8 +213,8 @@ function MobileChat({ onOpenCharts }: { onOpenCharts: () => void }) {
         2 charts <span aria-hidden="true">→</span>
       </button>
       <p className="mobile-answer">
-        North leads at 86% coverage; East trails at 61% — weakest since Q1 FY24. The week-9 recovery holds. FY28 trajectory intact
-        if East sustains through March.
+        Insight: North leads at 86% coverage; East trails at 61%, its weakest quarter since Q1 FY24. Chart observations: visits recover
+        after the week-5 dip, while LKO and PAT are the immediate dealer-risk follow-ups.
       </p>
       <div className="mobile-followups" aria-label="Follow up prompts">
         <button type="button">Farmer NPS</button>

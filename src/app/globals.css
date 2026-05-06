@@ -418,9 +418,10 @@ textarea:focus-visible {
 .answer-copy {
   margin: 14px 0 0;
   color: #151515;
-  font-size: 17px;
-  font-weight: 560;
-  line-height: 1.65;
+  font-size: 16px;
+  font-weight: 430;
+  line-height: 1.68;
+  white-space: pre-line;
 }
 
 .trace-summary {

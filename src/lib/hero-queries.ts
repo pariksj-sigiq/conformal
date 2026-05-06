@@ -42,6 +42,19 @@ function baseTrace(table: string): ChatEvent[] {
   ];
 }
 
+function finalResponse(insight: string, chartObservations: string[], watchOut?: string): ChatEvent {
+  return {
+    type: "final",
+    text: [
+      `Insight: ${insight}`,
+      `Chart observations:\n${chartObservations.map((observation) => `- ${observation}`).join("\n")}`,
+      watchOut ? `Watch-out: ${watchOut}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+  };
+}
+
 function fieldForceEvents(): ChatEvent[] {
   const charts = [
     chart(
@@ -128,7 +141,18 @@ function fieldForceEvents(): ChatEvent[] {
       1,
     ),
   ];
-  return [...baseTrace("field_force_activity"), ...charts.map((chart) => ({ type: "chart" as const, chart })), { type: "final", text: "North leads at 86% coverage; East trails at 61%, its weakest quarter since Q1 FY24. The week-9 recovery confirms the Allahabad TBM intervention is holding. FY28 trajectory stays intact if East sustains this pace through March." }];
+  return [
+    ...baseTrace("field_force_activity"),
+    ...charts.map((chart) => ({ type: "chart" as const, chart })),
+    finalResponse(
+      "North is still the strongest field-force zone at about 86% coverage, while East is the concern at about 61%, its weakest quarter since Q1 FY24. The recovery after week 9 suggests the Allahabad TBM intervention is working, but East needs sustained visit discipline through March before we can call it fixed.",
+      [
+        "The visits chart compares planned versus actual weekly visits; actuals dip around week 5, then recover and track much closer to plan by the end of the period.",
+        "The churn-risk bar view shows the near-term channel risk concentration: LKO and PAT are above the intervention line, while BPL sits in amber governance territory.",
+      ],
+      "Keep East on a weekly recovery cadence and pair field coverage with dealer-risk follow-up, not just visit completion.",
+    ),
+  ];
 }
 
 function procurementEvents(): ChatEvent[] {
@@ -150,7 +174,18 @@ function procurementEvents(): ChatEvent[] {
       },
     }, 3),
   ];
-  return [...baseTrace("procurement_spend"), ...charts.map((chart) => ({ type: "chart" as const, chart })), { type: "final", text: "The savings program is ahead where supplier concentration gives leverage, especially Logistics. The executive action is to move the under-target categories into weekly negotiation governance rather than wait for month-end variance review." }];
+  return [
+    ...baseTrace("procurement_spend"),
+    ...charts.map((chart) => ({ type: "chart" as const, chart })),
+    finalResponse(
+      "Procurement savings are ahead in categories where supplier concentration gives SFS leverage, especially Logistics and Raw Material. The gap is not a broad program failure; it is concentrated in under-target categories that need tighter negotiation governance before month-end variance reviews.",
+      [
+        "The savings-versus-target chart ranks categories against a target rule, making it clear which categories are creating the savings pool and which are still below threshold.",
+        "The six-month run-rate chart shows improvement over time, but the slope is uneven by category, so averages hide where intervention is still needed.",
+      ],
+      "Move the lagging categories into weekly governance with named owners and a supplier-specific action list.",
+    ),
+  ];
 }
 
 function npsEvents(): ChatEvent[] {
@@ -176,7 +211,18 @@ function npsEvents(): ChatEvent[] {
       },
     }, 2),
   ];
-  return [...baseTrace("farmer_nps"), ...charts.map((chart) => ({ type: "chart" as const, chart })), { type: "final", text: "Farmer sentiment is moving in the right direction, but the regional spread is too wide for comfort. North needs closed-loop recovery on the top service issues while South's operating playbook should be copied into West and Central." }];
+  return [
+    ...baseTrace("farmer_nps"),
+    ...charts.map((chart) => ({ type: "chart" as const, chart })),
+    finalResponse(
+      "Farmer sentiment is improving overall, but the regional spread is too wide to treat this as a system-wide win. South is creating the benchmark, while North remains structurally below the system average and needs service recovery plus digital activation together.",
+      [
+        "The NPS trend chart shows regional lines moving up, but North stays below the pack across quarters rather than showing a one-quarter dip.",
+        "The engagement scatter links app activity, support volume, and NPS; South combines stronger engagement with better sentiment, while North needs a closed-loop recovery motion.",
+      ],
+      "Use South's operating playbook as the replication case and give North a separate service-issue backlog.",
+    ),
+  ];
 }
 
 function microbattleEvents(): ChatEvent[] {
@@ -200,7 +246,18 @@ function microbattleEvents(): ChatEvent[] {
       },
     }, 3),
   ];
-  return [...baseTrace("wave1_microbattles"), ...charts.map((chart) => ({ type: "chart" as const, chart })), { type: "final", text: "Wave 1 is not a red program, but it has three visible pressure points. The CEO cockpit should use this view in every steerco: each watch or blocked micro-battle needs a named unblocker and a next checkpoint." }];
+  return [
+    ...baseTrace("wave1_microbattles"),
+    ...charts.map((chart) => ({ type: "chart" as const, chart })),
+    finalResponse(
+      "Wave 1 is not a red program, but it has three visible pressure points that need leadership attention. Most bets are moving, while the blocked leakage audit and two watch items need named unblockers rather than another status review.",
+      [
+        "The status heatmap shows progress by owner function and micro-battle, making the blocked and watch items visually obvious.",
+        "The completion chart orders the micro-battles from lowest to highest completion, so the bottom of the execution stack is clear rather than buried in a table.",
+      ],
+      "Use this view in every steerco until each watch or blocked item has an owner, unblocker, and next checkpoint.",
+    ),
+  ];
 }
 
 function churnEvents(): ChatEvent[] {
@@ -225,7 +282,18 @@ function churnEvents(): ChatEvent[] {
       },
     }, 2),
   ];
-  return [...baseTrace("channel_partners"), ...charts.map((chart) => ({ type: "chart" as const, chart })), { type: "final", text: "North churn risk is concentrated enough to action. Start with the top twelve dealers, split interventions between credit cleanup and scheme attachment, and make the regional head accountable for weekly recovery." }];
+  return [
+    ...baseTrace("channel_partners"),
+    ...charts.map((chart) => ({ type: "chart" as const, chart })),
+    finalResponse(
+      "North churn risk is concentrated enough to action rather than monitor passively. The highest-risk partners tend to combine weaker tier quality, high DSO, and weak scheme attachment, so the intervention should mix commercial recovery with credit cleanup.",
+      [
+        "The ranked churn chart shows the top risk accounts first and colors the bar by tier, which separates structural partner quality from temporary sales softness.",
+        "The DSO-versus-risk scatter shows that the most urgent accounts are not only churn risks; several also carry slow payment behavior, increasing recovery complexity.",
+      ],
+      "Start with the top twelve dealers and make the regional head accountable for weekly progress on both credit and scheme attachment.",
+    ),
+  ];
 }
 
 function commodityEvents(): ChatEvent[] {
@@ -241,7 +309,18 @@ function commodityEvents(): ChatEvent[] {
       encoding: { x: { field: "date", type: "temporal" }, y: { field: "price_inr", type: "quantitative" }, color: { field: "commodity", type: "nominal" } },
     }, 4),
   ];
-  return [...baseTrace("commodity_prices"), ...charts.map((chart) => ({ type: "chart" as const, chart })), { type: "final", text: "Commodity markets are moving enough to keep procurement alert, especially on fertilizer-linked inputs. Turn Live on and this cockpit will re-query the subscribed charts as the underlying market table changes." }];
+  return [
+    ...baseTrace("commodity_prices"),
+    ...charts.map((chart) => ({ type: "chart" as const, chart })),
+    finalResponse(
+      "Commodity markets are moving enough to keep procurement alert, especially on fertilizer-linked inputs where price direction can quickly change buying posture. The immediate read is not that every commodity needs action, but that current watch items should stay in the procurement war-room cadence.",
+      [
+        "The daily-move chart ranks commodities by latest percentage change, so the current watch list is visible without scanning every price series.",
+        "The sparkline chart shows whether the latest move is part of a trend or just a one-day fluctuation across the commodity basket.",
+      ],
+      "Use live refresh for this view when procurement is actively negotiating or deciding whether to hold volumes flat.",
+    ),
+  ];
 }
 
 function genericEvents(): ChatEvent[] {
@@ -250,5 +329,16 @@ function genericEvents(): ChatEvent[] {
     mark: { type: "bar", tooltip: true },
     encoding: { x: { field: "revenue_inr", type: "quantitative" }, y: { field: "region", type: "nominal", sort: "-x" }, color: { value: "#B8232E" } },
   }, 3);
-  return [...baseTrace("secondary_sales"), { type: "chart", chart: payload }, { type: "final", text: "I started from secondary sales because it is the broadest executive signal in the warehouse. Ask a sharper follow-up by region, product, field-force execution, NPS, procurement, or commodity exposure and I will compose a more specific view." }];
+  return [
+    ...baseTrace("secondary_sales"),
+    { type: "chart", chart: payload },
+    finalResponse(
+      "I started from secondary sales because it is the broadest executive signal in the current demo warehouse. The first scan suggests North is lagging the pack, so the next useful cut is to separate whether this is a region issue, a product mix issue, or a field execution issue.",
+      [
+        "The regional sales chart ranks latest-quarter revenue by region, giving a quick view of where the demand signal is strongest and weakest.",
+        "Because this is an aggregate view, it should be treated as a triage chart rather than a root-cause answer.",
+      ],
+      "Ask a sharper follow-up by region, product, field-force execution, NPS, procurement, or commodity exposure for a more diagnostic answer.",
+    ),
+  ];
 }

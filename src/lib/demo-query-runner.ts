@@ -3,6 +3,7 @@ import workbookTablesRaw from "@/lib/workbook-data.json";
 
 export type TableGetter = (name: string) => Row[];
 const workbookTables = workbookTablesRaw as Record<string, Row[]>;
+const semanticTables = buildSemanticTables(workbookTables);
 
 export function latestDate(rows: Row[]) {
   return String(rows.at(-1)?.date ?? rows.at(-1)?.week ?? rows.at(-1)?.month ?? "");
@@ -33,8 +34,224 @@ export function runDemoSql(sql: string, table: TableGetter): Row[] {
   }
 }
 
-export function runGeneratedSql(sql: string, table: TableGetter = (name) => workbookTables[name] ?? demoTables[name] ?? []) {
+export function runGeneratedSql(sql: string, table: TableGetter = (name) => semanticTables[name] ?? workbookTables[name] ?? demoTables[name] ?? []) {
   return runGenericSelect(sql, table);
+}
+
+function buildSemanticTables(tables: Record<string, Row[]>): Record<string, Row[]> {
+  const products = indexBy(tables.dim_product, "sku");
+  const distributors = indexBy(tables.dim_distributor, "distributor_id");
+  const suppliers = indexBy(tables.dim_supplier, "supplier_id");
+
+  const salesEnriched = (tables.fact_primary_sales ?? []).map((row) => enrichWithProductAndDistributor(row, products, distributors, "transaction_date"));
+  const secondarySalesEnriched = (tables.fact_secondary_sales ?? []).map((row) => enrichWithProductAndDistributor(row, products, distributors, "month"));
+  const inventoryEnriched = (tables.fact_inventory ?? []).map((row) => enrichWithProductAndDistributor(row, products, distributors, "snapshot_date"));
+  const collectionsEnriched = (tables.fact_collections ?? []).map((row) => ({
+    ...row,
+    ...distributorFields(distributors[String(row.distributor_id ?? "")]),
+    fiscal_year: fiscalYearForDate(row.invoice_date),
+    fiscal_quarter: fiscalQuarterForDate(row.invoice_date),
+  }));
+  const fieldVisitsEnriched = (tables.fact_field_visits ?? []).map((row) => ({
+    ...row,
+    ...distributorFields(distributors[String(row.distributor_id ?? "")]),
+    fiscal_year: fiscalYearForDate(row.visit_date),
+    fiscal_quarter: fiscalQuarterForDate(row.visit_date),
+  }));
+  const procurementEnriched = (tables.fact_procurement ?? []).map((row) => ({
+    ...row,
+    ...supplierFields(suppliers[String(row.supplier_id ?? "")]),
+    fiscal_quarter: fiscalQuarterForDate(row.po_date),
+  }));
+
+  return {
+    sales_enriched: salesEnriched,
+    secondary_sales_enriched: secondarySalesEnriched,
+    inventory_enriched: inventoryEnriched,
+    collections_enriched: collectionsEnriched,
+    field_visits_enriched: fieldVisitsEnriched,
+    procurement_enriched: procurementEnriched,
+    channel_flow_monthly: buildChannelFlowMonthly(salesEnriched, secondarySalesEnriched),
+    distributor_health: buildDistributorHealth(salesEnriched, collectionsEnriched),
+  };
+}
+
+function enrichWithProductAndDistributor(row: Row, products: Record<string, Row>, distributors: Record<string, Row>, dateKey: string): Row {
+  return {
+    ...row,
+    ...productFields(products[String(row.sku ?? "")]),
+    ...distributorFields(distributors[String(row.distributor_id ?? "")]),
+    fiscal_year: row.fiscal_year ?? fiscalYearForDate(row[dateKey]),
+    fiscal_quarter: row.fiscal_quarter ?? fiscalQuarterForDate(row[dateKey]),
+  };
+}
+
+function productFields(product?: Row): Row {
+  return {
+    product_name: product?.product_name ?? null,
+    category: product?.category ?? null,
+    sub_category: product?.sub_category ?? null,
+    technical_active: product?.technical_active ?? null,
+    launch_year: product?.launch_year ?? null,
+    applicable_crops: product?.applicable_crops ?? null,
+    is_new_launch: product?.is_new_launch ?? null,
+  };
+}
+
+function distributorFields(distributor?: Row): Row {
+  return {
+    distributor_name: distributor?.distributor_name ?? null,
+    state: distributor?.state ?? null,
+    region: distributor?.region ?? null,
+    district: distributor?.district ?? null,
+    agri_belt: distributor?.agri_belt ?? null,
+    tier: distributor?.tier ?? null,
+    zone: distributor?.zone ?? null,
+    primary_crops: distributor?.primary_crops ?? null,
+    assigned_tbm_id: distributor?.assigned_tbm_id ?? null,
+    assigned_rbm_id: distributor?.assigned_rbm_id ?? null,
+    credit_limit_inr: distributor?.credit_limit_inr ?? null,
+  };
+}
+
+function supplierFields(supplier?: Row): Row {
+  return {
+    supplier_name: supplier?.supplier_name ?? null,
+    supplier_category: supplier?.category ?? null,
+    supplier_country: supplier?.country ?? null,
+    ariba_status: supplier?.ariba_status ?? null,
+  };
+}
+
+function buildChannelFlowMonthly(salesRows: Row[], secondaryRows: Row[]) {
+  const buckets = new Map<string, Row>();
+  salesRows.forEach((row) => {
+    const month = monthForDate(row.transaction_date);
+    const key = bucketKey(month, row.region, row.category);
+    const current = buckets.get(key) ?? baseFlowRow(month, row);
+    current.sell_in_value_inr = Number(current.sell_in_value_inr ?? 0) + Number(row.net_value_inr ?? 0);
+    current.sell_in_units = Number(current.sell_in_units ?? 0) + Number(row.qty_units ?? 0);
+    buckets.set(key, current);
+  });
+
+  secondaryRows.forEach((row) => {
+    const month = monthForDate(row.month);
+    const key = bucketKey(month, row.region, row.category);
+    const current = buckets.get(key) ?? baseFlowRow(month, row);
+    current.sell_out_value_inr = Number(current.sell_out_value_inr ?? 0) + Number(row.sell_out_value_inr ?? 0);
+    current.sell_out_units = Number(current.sell_out_units ?? 0) + Number(row.qty_sold_out ?? 0);
+    buckets.set(key, current);
+  });
+
+  return Array.from(buckets.values()).map((row) => ({
+    ...row,
+    sell_in_value_inr: roundNumber(Number(row.sell_in_value_inr ?? 0)),
+    sell_out_value_inr: roundNumber(Number(row.sell_out_value_inr ?? 0)),
+    sell_in_units: roundNumber(Number(row.sell_in_units ?? 0)),
+    sell_out_units: roundNumber(Number(row.sell_out_units ?? 0)),
+  }));
+}
+
+function baseFlowRow(month: string, row: Row): Row {
+  return {
+    month,
+    fiscal_year: fiscalYearForDate(month),
+    fiscal_quarter: fiscalQuarterForDate(month),
+    region: row.region ?? null,
+    category: row.category ?? null,
+    sell_in_value_inr: 0,
+    sell_out_value_inr: 0,
+    sell_in_units: 0,
+    sell_out_units: 0,
+  };
+}
+
+function buildDistributorHealth(salesRows: Row[], collectionRows: Row[]) {
+  const buckets = new Map<string, Row>();
+  salesRows.forEach((row) => {
+    const distributorId = String(row.distributor_id ?? "");
+    if (!distributorId) return;
+    const current = buckets.get(distributorId) ?? baseDistributorHealth(row);
+    const revenueField = row.fiscal_year === "FY26" ? "revenue_fy26_inr" : row.fiscal_year === "FY25" ? "revenue_fy25_inr" : "";
+    if (revenueField) current[revenueField] = Number(current[revenueField] ?? 0) + Number(row.net_value_inr ?? 0);
+    buckets.set(distributorId, current);
+  });
+
+  const collectionStats = new Map<string, { overdue: number; paymentDays: number; paidCount: number; outstanding: number }>();
+  collectionRows.forEach((row) => {
+    const distributorId = String(row.distributor_id ?? "");
+    const current = collectionStats.get(distributorId) ?? { overdue: 0, paymentDays: 0, paidCount: 0, outstanding: 0 };
+    current.overdue += Number(row.days_overdue ?? 0);
+    if (row.status === "Outstanding") current.outstanding += Number(row.invoice_value_inr ?? 0);
+    if (row.status === "Paid") {
+      current.paymentDays += Number(row.actual_payment_days ?? 0);
+      current.paidCount += 1;
+    }
+    collectionStats.set(distributorId, current);
+  });
+
+  return Array.from(buckets.values()).map((row) => {
+    const stats = collectionStats.get(String(row.distributor_id ?? "")) ?? { overdue: 0, paymentDays: 0, paidCount: 0, outstanding: 0 };
+    const revenueFy25 = Number(row.revenue_fy25_inr ?? 0);
+    const revenueFy26 = Number(row.revenue_fy26_inr ?? 0);
+    return {
+      ...row,
+      revenue_fy25_inr: roundNumber(revenueFy25),
+      revenue_fy26_inr: roundNumber(revenueFy26),
+      yoy_change_pct: revenueFy25 ? roundNumber(((revenueFy26 - revenueFy25) / revenueFy25) * 100) : 0,
+      avg_payment_days: stats.paidCount ? roundNumber(stats.paymentDays / stats.paidCount) : 0,
+      outstanding_value_inr: roundNumber(stats.outstanding),
+      total_days_overdue: roundNumber(stats.overdue),
+    };
+  });
+}
+
+function baseDistributorHealth(row: Row): Row {
+  return {
+    distributor_id: row.distributor_id ?? null,
+    distributor_name: row.distributor_name ?? null,
+    state: row.state ?? null,
+    region: row.region ?? null,
+    district: row.district ?? null,
+    agri_belt: row.agri_belt ?? null,
+    tier: row.tier ?? null,
+    zone: row.zone ?? null,
+    primary_crops: row.primary_crops ?? null,
+    revenue_fy25_inr: 0,
+    revenue_fy26_inr: 0,
+  };
+}
+
+function indexBy(rows: Row[] = [], key: string) {
+  return Object.fromEntries(rows.map((row) => [String(row[key] ?? ""), row]));
+}
+
+function bucketKey(...parts: unknown[]) {
+  return parts.map((part) => String(part ?? "")).join("\u001f");
+}
+
+function fiscalYearForDate(value: unknown) {
+  const date = String(value ?? "");
+  const match = date.match(/^(\d{4})-(\d{2})/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  return `FY${String(month >= 4 ? year + 1 : year).slice(-2)}`;
+}
+
+function fiscalQuarterForDate(value: unknown) {
+  const date = String(value ?? "");
+  const month = Number(date.match(/^\d{4}-(\d{2})/)?.[1] ?? 0);
+  if (month >= 4 && month <= 6) return "Q1";
+  if (month >= 7 && month <= 9) return "Q2";
+  if (month >= 10 && month <= 12) return "Q3";
+  if (month >= 1 && month <= 3) return "Q4";
+  return null;
+}
+
+function monthForDate(value: unknown) {
+  const date = String(value ?? "");
+  return date.match(/^\d{4}-\d{2}/)?.[0] ?? date;
 }
 
 function runTaggedDemoSql(sql: string, table: TableGetter): Row[] {

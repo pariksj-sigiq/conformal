@@ -1,10 +1,22 @@
 import type { ChartPayload, ChatEvent } from "@/lib/agent-types";
 import { callAzureOpenAi, isAzureOpenAiConfigured } from "@/lib/azure-openai";
-import { dataDictionary } from "@/lib/data-dictionary";
+import { queryDictionary } from "@/lib/data-dictionary";
 import { runGeneratedSql } from "@/lib/demo-query-runner";
 import { responseContract, sfsModelContext } from "@/lib/sfs-model-context";
 
-type RouteId = "finance" | "field_force" | "procurement" | "nps" | "microbattle" | "churn" | "commodity" | "sales";
+type RouteId =
+  | "finance"
+  | "sales"
+  | "targets"
+  | "inventory"
+  | "collections"
+  | "field_force"
+  | "procurement"
+  | "regulatory"
+  | "commodity"
+  | "nps"
+  | "microbattle"
+  | "churn";
 
 type PlannerOutput = {
   route?: string;
@@ -36,24 +48,32 @@ type TimedResult<T> = {
 
 const ROUTE_PROMPTS: Record<RouteId, string> = {
   finance: "Show me the revenue and EBITDA time series.",
+  sales: "Show me sales by region and category.",
+  targets: "Show me achievement versus target.",
+  inventory: "Which inventory is aging the most?",
+  collections: "Which distributors are slow paying or overdue?",
   field_force: "How is the field force tracking this quarter?",
   procurement: "Show me procurement savings vs target by category.",
+  regulatory: "Show the regulatory pipeline and expected uplift.",
+  commodity: "What's moving in commodity markets today?",
   nps: "What's happening with farmer NPS across regions?",
   microbattle: "Status of Wave 1 micro-battles.",
   churn: "Channel partners at churn risk in North zone.",
-  commodity: "What's moving in commodity markets today?",
-  sales: "Show me revenue by zones.",
 };
 
 const ROUTE_LABELS: Record<RouteId, string> = {
   finance: "fact_finance_pl",
-  field_force: "fact_field_visits",
-  procurement: "fact_procurement",
+  sales: "sales_enriched",
+  targets: "fact_targets",
+  inventory: "inventory_enriched",
+  collections: "collections_enriched",
+  field_force: "field_visits_enriched",
+  procurement: "procurement_enriched",
+  regulatory: "fact_regulatory_pipeline",
+  commodity: "fact_commodity_prices",
   nps: "fact_targets",
   microbattle: "wave1_microbattles",
-  churn: "fact_collections",
-  commodity: "fact_commodity_prices",
-  sales: "fact_targets",
+  churn: "distributor_health",
 };
 
 const ROUTE_CATALOG = Object.entries(ROUTE_PROMPTS).map(([route, prompt]) => ({ route, example: prompt, primary_table: ROUTE_LABELS[route as RouteId] }));
@@ -243,12 +263,19 @@ export async function* agentEvents(message: string, signal?: AbortSignal): Async
 
 function pickLocalRoute(prompt: string): RouteId {
   const lower = prompt.toLowerCase();
+  if (/\b(inventory|stock|aging|stale|slow moving|obsolete)\b/.test(lower)) return "inventory";
+  if (/\b(churn|declin|vidarbha|watchlist|watch list)\b/.test(lower)) return "churn";
+  if (/\b(collection|collections|dso|overdue|outstanding|payment|receivable|slow pay|slow-paying|slow paying)\b/.test(lower)) return "collections";
+  if (/\b(regulatory|registration|pipeline|approval|approved|filed|filing|mapa|cibrc|efsa|epa|brazil|uplift)\b/.test(lower)) return "regulatory";
+  if (/\b(target|achievement|plan|ambition|fy28)\b/.test(lower)) return "targets";
+  if (/\b(sell[- ]?out|sell[- ]?in|channel stuffing|stuffing|pull[- ]?through|growth book)\b/.test(lower)) return "sales";
+  if (/\b(glyphosate|supplier|ariba|premium|market spot|contracted price|purchase order|po\b)\b/.test(lower)) return "procurement";
   const hasFinanceMetric = /\b(revenue|sales|ebitda|pbd?t|profit|margin)\b/.test(lower);
   const hasTimeIntent = /\b(time series|trend|monthly|month|over time|run[- ]?rate|trajectory|fy|quarter)\b/.test(lower);
   const hasExplicitFinance = /\b(ebitda|pbd?t|p&l|financial|margin)\b/.test(lower);
   const asksRegionalCut = /\b(region|zone|state|product|channel|dealer|cohort)\b/.test(lower);
   if (hasExplicitFinance || (hasFinanceMetric && hasTimeIntent && !asksRegionalCut)) return "finance";
-  if (lower.includes("field force")) return "field_force";
+  if (lower.includes("field force") || /\b(mgo|visit|visits|coverage|conversion)\b/.test(lower)) return "field_force";
   if (lower.includes("procurement")) return "procurement";
   if (lower.includes("nps")) return "nps";
   if (lower.includes("micro")) return "microbattle";
@@ -269,9 +296,12 @@ async function runPlannerAgent(message: string, localRoute: RouteId, signal?: Ab
           "Do not invent tables. Choose route from this catalog, then write a real SQL SELECT over the table columns.",
           "Supported SQL: SELECT columns and SUM/AVG/MIN/MAX/COUNT aggregates, FROM one table, optional WHERE with AND, optional GROUP BY, ORDER BY, LIMIT.",
           "Do not use joins, CTEs, date functions, window functions, QUALIFY, NULLIF, arithmetic expressions, or table aliases.",
+          "Prefer semantic *_enriched views over raw fact tables whenever the question mentions product, distributor, geography, supplier, inventory, collections, field-force, sell-in/sell-out, or churn cuts.",
+          "Use channel_flow_monthly for sell-in versus sell-out or channel stuffing questions.",
+          "Use distributor_health for distributor churn, YoY decline, slow payment, Vidarbha, or watchlist questions.",
           JSON.stringify(ROUTE_CATALOG, null, 2),
           `Local fallback route: ${localRoute}`,
-          `Data dictionary: ${JSON.stringify(dataDictionary, null, 2)}`,
+          `Data dictionary: ${JSON.stringify(queryDictionary, null, 2)}`,
           `Question: ${message}`,
         ].join("\n\n"),
       },
@@ -337,7 +367,7 @@ function jsonAgentSystem(agentName: string) {
     "Return strict JSON only. No markdown, no prose outside JSON.",
     responseContract,
     sfsModelContext,
-    `Data dictionary: ${JSON.stringify(dataDictionary)}`,
+    `Data dictionary: ${JSON.stringify(queryDictionary)}`,
   ].join("\n\n");
 }
 
@@ -363,6 +393,7 @@ function fallbackFinalFromRows(route: RouteId, rows: Record<string, unknown>[]):
     primaryNumeric && labelColumn
       ? [...rows].sort((left, right) => Number(right[primaryNumeric] ?? 0) - Number(left[primaryNumeric] ?? 0))[0]
       : undefined;
+  const riskRow = primaryNumeric && /yoy_change_pct|avg_payment_days|days_overdue/i.test(primaryNumeric) ? rows[0] : undefined;
   const total =
     primaryNumeric && /revenue|value|spend|sales|invoice|target|actual|ebitda/i.test(primaryNumeric)
       ? rows.reduce((sum, row) => sum + Number(row[primaryNumeric] ?? 0), 0)
@@ -371,9 +402,11 @@ function fallbackFinalFromRows(route: RouteId, rows: Record<string, unknown>[]):
   return {
     type: "final",
     text: [
-      topRow && primaryNumeric && labelColumn
-        ? `Insight: ${String(topRow[labelColumn])} is the largest contributor on ${metricLabel(primaryNumeric).toLowerCase()}${total ? `; total is ${formatBusinessNumber(total)} across ${rows.length} rows` : ""}.`
-        : `Insight: The agents executed a live SQL query against ${ROUTE_LABELS[route]} and returned ${rows.length} rows for analysis.`,
+      riskRow && primaryNumeric && labelColumn
+        ? `Insight: ${String(riskRow[labelColumn])} is the highest-risk row on ${metricLabel(primaryNumeric).toLowerCase()} at ${formatMetricValue(primaryNumeric, Number(riskRow[primaryNumeric] ?? 0))}.`
+        : topRow && primaryNumeric && labelColumn
+          ? `Insight: ${String(topRow[labelColumn])} is the largest contributor on ${metricLabel(primaryNumeric).toLowerCase()}${total ? `; total is ${formatBusinessNumber(total)} across ${rows.length} rows` : ""}.`
+          : `Insight: The agents executed a live SQL query against ${ROUTE_LABELS[route]} and returned ${rows.length} rows for analysis.`,
       `Chart observations:\n- The chart uses ${labelColumn ? metricLabel(labelColumn) : metricLabel(columns[0] ?? "the category")} on the x-axis and ${primaryNumeric ? metricLabel(primaryNumeric).toLowerCase() : "the selected metric"} on the y-axis.\n- The result columns are: ${columns.map(metricLabel).join(", ") || "none"}.`,
     ].join("\n\n"),
   };
@@ -405,23 +438,59 @@ function runSqlAttempt(sql: string) {
 function defaultSqlForRoute(route: RouteId) {
   const sqlByRoute: Record<RouteId, string> = {
     finance: "SELECT month, SUM(revenue_inr) AS revenue_inr, SUM(ebitda_inr) AS ebitda_inr, AVG(ebitda_pct) AS ebitda_pct FROM fact_finance_pl GROUP BY month ORDER BY month LIMIT 24",
-    field_force: "SELECT visit_outcome, COUNT(*) AS visits, AVG(duration_min) AS avg_duration_min FROM fact_field_visits GROUP BY visit_outcome ORDER BY visits DESC LIMIT 10",
-    procurement: "SELECT material_category, SUM(total_value_inr) AS total_value_inr, AVG(premium_vs_market_pct) AS premium_vs_market_pct FROM fact_procurement GROUP BY material_category ORDER BY total_value_inr DESC LIMIT 10",
+    sales: "SELECT region, category, SUM(net_value_inr) AS net_value_inr, SUM(qty_units) AS qty_units FROM sales_enriched GROUP BY region, category ORDER BY net_value_inr DESC LIMIT 12",
+    targets: "SELECT region, category, SUM(target_net_value_inr) AS target_net_value_inr, SUM(actual_net_value_inr) AS actual_net_value_inr, AVG(achievement_pct) AS achievement_pct FROM fact_targets GROUP BY region, category ORDER BY achievement_pct DESC LIMIT 12",
+    inventory: "SELECT aging_bucket, SUM(inventory_value_at_mrp_inr) AS inventory_value_at_mrp_inr, AVG(days_aging) AS avg_days_aging FROM inventory_enriched GROUP BY aging_bucket ORDER BY inventory_value_at_mrp_inr DESC LIMIT 10",
+    collections: "SELECT status, SUM(invoice_value_inr) AS invoice_value_inr, AVG(days_overdue) AS avg_days_overdue, COUNT(*) AS invoices FROM collections_enriched GROUP BY status ORDER BY invoice_value_inr DESC LIMIT 10",
+    field_force: "SELECT visit_outcome, COUNT(*) AS visits, AVG(duration_min) AS avg_duration_min FROM field_visits_enriched GROUP BY visit_outcome ORDER BY visits DESC LIMIT 10",
+    procurement: "SELECT material_category, SUM(total_value_inr) AS total_value_inr, AVG(premium_vs_market_pct) AS premium_vs_market_pct FROM procurement_enriched GROUP BY material_category ORDER BY total_value_inr DESC LIMIT 10",
+    regulatory: "SELECT country, status, SUM(expected_revenue_uplift_inr_cr_y1) AS expected_revenue_uplift_inr_cr_y1, COUNT(*) AS filings FROM fact_regulatory_pipeline GROUP BY country, status ORDER BY expected_revenue_uplift_inr_cr_y1 DESC LIMIT 12",
+    commodity: "SELECT commodity, AVG(spot_price_inr) AS spot_price_inr FROM fact_commodity_prices GROUP BY commodity ORDER BY spot_price_inr DESC LIMIT 10",
     nps: "SELECT region, category, AVG(achievement_pct) AS achievement_pct, SUM(actual_net_value_inr) AS actual_net_value_inr FROM fact_targets GROUP BY region, category ORDER BY achievement_pct DESC LIMIT 12",
     microbattle: "SELECT name, owner_function, status, percent_complete FROM wave1_microbattles ORDER BY percent_complete ASC LIMIT 12",
-    churn: "SELECT status, AVG(days_overdue) AS avg_days_overdue, SUM(invoice_value_inr) AS invoice_value_inr, COUNT(*) AS invoices FROM fact_collections GROUP BY status ORDER BY avg_days_overdue DESC LIMIT 10",
-    commodity: "SELECT commodity, AVG(spot_price_inr) AS spot_price_inr FROM fact_commodity_prices GROUP BY commodity ORDER BY spot_price_inr DESC LIMIT 10",
-    sales: "SELECT region, category, SUM(actual_net_value_inr) AS actual_net_value_inr, SUM(target_net_value_inr) AS target_net_value_inr, AVG(achievement_pct) AS achievement_pct FROM fact_targets GROUP BY region, category ORDER BY actual_net_value_inr DESC LIMIT 12",
+    churn: "SELECT distributor_name, region, agri_belt, yoy_change_pct, avg_payment_days, outstanding_value_inr FROM distributor_health ORDER BY yoy_change_pct ASC LIMIT 12",
   };
   return sqlByRoute[route];
 }
 
-function localPlanForPrompt(prompt: string, route: RouteId) {
+function localPlanForPrompt(prompt: string, route: RouteId): { route: RouteId; sql: string; description: string } {
   const lower = prompt.toLowerCase();
   const asksRevenue = /\b(revenue|sales|topline|turnover)\b/.test(lower);
   const asksEbitda = /\b(ebitda|profit|margin|pbd?t)\b/.test(lower);
   const asksLastQuarter = /\b(last|previous|prior)\s+(quarter|qtr)\b/.test(lower);
   const asksTrend = /\b(time series|trend|monthly|over time|trajectory|run[- ]?rate)\b/.test(lower);
+
+  if (route === "sales" && /\b(sell[- ]?out|sell[- ]?in|channel stuffing|stuffing|pull[- ]?through|growth book)\b/.test(lower)) {
+    return {
+      route,
+      sql: "SELECT month, category, SUM(sell_in_value_inr) AS sell_in_value_inr, SUM(sell_out_value_inr) AS sell_out_value_inr FROM channel_flow_monthly WHERE fiscal_year = 'FY26' AND fiscal_quarter = 'Q4' GROUP BY month, category ORDER BY month LIMIT 20",
+      description: "Local planner selected monthly sell-in versus sell-out from channel_flow_monthly for FY26 Q4.",
+    };
+  }
+
+  if ((route === "churn" || route === "collections") && lower.includes("vidarbha")) {
+    return {
+      route: "churn",
+      sql: "SELECT distributor_name, region, agri_belt, yoy_change_pct, avg_payment_days, outstanding_value_inr FROM distributor_health WHERE agri_belt = 'Vidarbha cotton belt' ORDER BY yoy_change_pct ASC LIMIT 10",
+      description: "Local planner selected distributor_health for Vidarbha revenue decline and payment risk.",
+    };
+  }
+
+  if (route === "procurement" && lower.includes("glyphosate")) {
+    return {
+      route,
+      sql: "SELECT supplier_name, commodity_link, SUM(total_value_inr) AS total_value_inr, AVG(premium_vs_market_pct) AS premium_vs_market_pct FROM procurement_enriched WHERE commodity_link = 'Glyphosate Technical' GROUP BY supplier_name, commodity_link ORDER BY premium_vs_market_pct DESC LIMIT 10",
+      description: "Local planner selected procurement_enriched for Glyphosate Technical supplier premium versus market.",
+    };
+  }
+
+  if (route === "regulatory" && lower.includes("brazil")) {
+    return {
+      route,
+      sql: "SELECT status, SUM(expected_revenue_uplift_inr_cr_y1) AS expected_revenue_uplift_inr_cr_y1, COUNT(*) AS filings FROM fact_regulatory_pipeline WHERE country = 'Brazil' GROUP BY status ORDER BY expected_revenue_uplift_inr_cr_y1 DESC LIMIT 10",
+      description: "Local planner selected Brazil regulatory pipeline status and expected Y1 revenue uplift.",
+    };
+  }
 
   if (route === "finance" && asksRevenue && asksLastQuarter && !asksTrend) {
     return {
@@ -452,13 +521,17 @@ function localPlanForPrompt(prompt: string, route: RouteId) {
 function titleForRoute(route: RouteId) {
   const titles: Record<RouteId, string> = {
     finance: "Financial performance trend",
+    sales: "Sales analysis",
+    targets: "Target achievement",
+    inventory: "Inventory aging",
+    collections: "Collections and DSO",
     field_force: "Field-force execution",
     procurement: "Procurement performance",
+    regulatory: "Regulatory pipeline",
+    commodity: "Commodity market movement",
     nps: "Farmer NPS analysis",
     microbattle: "Wave 1 execution status",
     churn: "Channel-partner churn risk",
-    commodity: "Commodity market movement",
-    sales: "Revenue analysis",
   };
   return titles[route];
 }
@@ -542,6 +615,15 @@ function metricLabel(key: string) {
   const normalized = key.toLowerCase().replace(/^(sum|avg|min|max|count)\s+/, "");
   if (normalized === "revenue_inr") return "Revenue";
   if (normalized === "ebitda_inr") return "EBITDA";
+  if (normalized === "net_value_inr") return "Booked revenue";
+  if (normalized === "sell_in_value_inr") return "Sell-in value";
+  if (normalized === "sell_out_value_inr") return "Sell-out value";
+  if (normalized === "inventory_value_at_mrp_inr") return "Inventory value";
+  if (normalized === "invoice_value_inr") return "Invoice value";
+  if (normalized === "expected_revenue_uplift_inr_cr_y1") return "Expected revenue uplift";
+  if (normalized === "premium_vs_market_pct") return "Premium vs market %";
+  if (normalized === "avg_payment_days") return "Average payment days";
+  if (normalized === "yoy_change_pct") return "YoY change %";
   if (normalized === "total_value_inr") return "Total value";
   if (normalized === "actual_net_value_inr") return "Actual sales";
   if (normalized === "target_net_value_inr") return "Target sales";
@@ -556,6 +638,12 @@ function formatBusinessNumber(value: number) {
   const abs = Math.abs(value);
   if (abs >= 10_000_000) return `₹${(value / 10_000_000).toFixed(abs >= 100_000_000 ? 1 : 2)} Cr`;
   if (abs >= 100_000) return `₹${(value / 100_000).toFixed(1)} L`;
+  return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(value);
+}
+
+function formatMetricValue(metric: string, value: number) {
+  if (/pct|percent|rate/i.test(metric)) return `${value.toFixed(1).replace(/\.0$/, "")}%`;
+  if (/value|revenue|sales|invoice|ebitda|spend|inr/i.test(metric)) return formatBusinessNumber(value);
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(value);
 }
 

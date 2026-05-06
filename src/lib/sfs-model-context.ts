@@ -10,6 +10,15 @@ Business and time rules
 - FY28 ambition target row is Rs 2,400 Cr.
 
 Schema map
+- Prefer semantic views for analysis because the runtime supports simple single-table SQL, not joins:
+  - sales_enriched: primary sell-in/booked revenue with product + distributor geography.
+  - secondary_sales_enriched: Growth Book sell-out with product + distributor geography.
+  - channel_flow_monthly: monthly sell-in versus sell-out by region/category.
+  - inventory_enriched: inventory aging with product + distributor geography.
+  - collections_enriched: invoice payment/DSO with distributor geography.
+  - distributor_health: distributor revenue YoY, average payment days, outstanding exposure.
+  - field_visits_enriched: visit logs with distributor geography.
+  - procurement_enriched: purchase orders with supplier profile.
 - dim_calendar: day dimension with fiscal year, fiscal quarter, fiscal month, and season.
 - dim_geography: district dimension; agri_belt is the useful cluster key.
 - dim_employee: ZBM/RBM/TBM/MGO hierarchy; manager_id is self-referencing.
@@ -30,6 +39,7 @@ Schema map
 - fact_regulatory_pipeline: molecule/country registration pipeline and expected Y1 uplift.
 
 Join rules
+- Do not ask the SQL runtime to write joins. Use the semantic *_enriched views and distributor_health/channel_flow_monthly instead.
 - distributor_id connects primary sales, secondary sales, inventory, collections, and visits to dim_distributor.
 - sku connects sales and inventory to dim_product.
 - mgo_id, assigned_tbm_id, and assigned_rbm_id connect to dim_employee.employee_id.

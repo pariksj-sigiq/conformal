@@ -32,7 +32,7 @@ def test_interpreter_clear_question():
 
 @requires_api
 def test_interpreter_ambiguous_question():
-    result = interpret("Show me the bad distributors")
+    result = interpret("Show me the underperforming distributors")
     assert result.intent_understood is False
     assert result.clarifying_question
     assert result.options_for_user and len(result.options_for_user) >= 2

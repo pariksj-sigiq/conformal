@@ -68,16 +68,16 @@ For each question: the user input, the expected interpretation, the expected pla
 
 **Expected Plan**:
 - a1: composite_score — distributor health combining 3 metrics
-- a2: breakdown — geographic concentration of unhealthy distributors
+- a2: breakdown — geographic concentration of at-risk distributors
 
 **Expected presentation**:
-- Table: "Distributors at risk" (top 10 unhealthy, with 4 columns: name, YoY%, DSO, sell-thru)
+- Table: "Distributors at risk" (top 10 at-risk, with 4 columns: name, YoY%, DSO, sell-thru)
 - Bar chart or stacked bar: "Where are at-risk distributors concentrated?" (by agri_belt)
 
 **Expected narrative tone**:
 - Headline: "10-12 distributors flagged across all three risk dimensions, ~₹X Cr revenue at risk"
 - Highlight Vidarbha cotton belt concentration
-- Note these distributors pay ~25 days slower than healthy peers
+- Note these distributors pay ~25 days slower than stable peers
 - ~150 words
 
 ---

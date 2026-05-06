@@ -315,4 +315,4 @@ fact_finance_pl.business_unit ←→ dim_product.category (same value domain)
 - For aggregations, alias output columns with units (`_cr`, `_pct`, `_days`, `_units`)
 - LIMIT to top 20 unless the user asks for more
 
-If the question is genuinely ambiguous (e.g., "show me the bad distributors" — bad how?), respond with one short clarifying question and no SQL. Otherwise, generate the best SQL given a reasonable interpretation and proceed.
+If the question is genuinely ambiguous (e.g., "show me the underperforming distributors" — underperforming in what way?), respond with one short clarifying question and no SQL. Otherwise, generate the best SQL given a reasonable interpretation and proceed.

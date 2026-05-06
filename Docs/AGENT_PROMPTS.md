@@ -54,8 +54,8 @@ Surface these as `implicit_assumptions` only when they're load-bearing for the a
 ## When to ask for clarification
 
 Ask when:
-- The question references something with multiple plausible interpretations ("which distributors are bad" — bad how?)
-- The question requires a metric you'd have to invent ("show me the unhealthy ones")
+- The question references something with multiple plausible interpretations ("which distributors are underperforming" — underperforming in what way?)
+- The question requires a metric you'd have to invent ("show me the at-risk ones")
 - A scope filter is missing and matters ("how is the business doing" — over what time frame?)
 - The user's intent is genuinely unclear
 
@@ -109,7 +109,7 @@ RESPONSE:
   "options_for_user": null
 }
 
-USER: "Show me the bad distributors"
+USER: "Show me the underperforming distributors"
 RESPONSE:
 {
   "intent_understood": false,
@@ -117,7 +117,7 @@ RESPONSE:
   "implicit_assumptions": [
     "Likely intent: distributors at risk by some health metric"
   ],
-  "clarifying_question": "When you say 'bad distributors,' which dimension matters most?",
+  "clarifying_question": "When you say 'underperforming distributors,' which dimension matters most?",
   "options_for_user": [
     "Declining sales (FY26 vs FY25)",
     "Late payments / high DSO",
@@ -297,10 +297,10 @@ PLAN:
     },
     {
       "analysis_id": "a2",
-      "purpose": "Identify geographic concentration of unhealthy distributors",
+      "purpose": "Identify geographic concentration of at-risk distributors",
       "type": "breakdown",
       "tables_needed": ["dim_distributor"],
-      "filters": {"distributor_id": "from a1, distributors flagged unhealthy"},
+      "filters": {"distributor_id": "from a1, distributors flagged at-risk"},
       "measures": ["count(*)", "sum(revenue_at_risk_inr)"],
       "dimensions": ["agri_belt"],
       "expected_output_shape": "5-10 rows by belt, ranked by count"

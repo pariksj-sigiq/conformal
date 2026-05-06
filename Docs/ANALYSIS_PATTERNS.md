@@ -281,10 +281,10 @@ GROUP BY d.distributor_name, d.tier
     "metric_1 AS revenue_yoy_pct",
     "metric_2 AS avg_dso_days",
     "metric_3 AS sell_thru_ratio",
-    "CASE WHEN ... AND ... AND ... THEN 'unhealthy' ELSE 'healthy' END AS health_flag"
+    "CASE WHEN ... AND ... AND ... THEN 'at-risk' ELSE 'stable' END AS health_flag"
   ],
   "dimensions": ["distributor_id", "distributor_name"],
-  "expected_output_shape": "150 rows; downstream analyses may filter to 'unhealthy' subset"
+  "expected_output_shape": "150 rows; downstream analyses may filter to 'at-risk' subset"
 }
 ```
 
@@ -321,8 +321,8 @@ SELECT
     WHEN (yoy.fy26_rev/yoy.fy25_rev - 1) < -0.10
      AND dso.avg_dso_days > 60
      AND sellthru.sell_thru_ratio < 0.85
-    THEN 'unhealthy'
-    ELSE 'healthy'
+    THEN 'at-risk'
+    ELSE 'stable'
   END AS health_flag
 FROM dim_distributor d
 LEFT JOIN yoy USING (distributor_id)
@@ -348,4 +348,4 @@ The Planner should pick the pattern matching the question shape:
 | "Is X correlated with Y?" / "X plotted against Y" | `correlation` |
 | "Who's struggling on multiple fronts?" | `composite_score` |
 
-When questions combine multiple shapes (very common), the plan should use multiple patterns. "Which distributors are unhealthy and where are they geographically concentrated?" = `composite_score` + `breakdown`. "Why did EBITDA miss and which BU was worst?" = `kpi_lookup` + `decomposition` + `breakdown`.
+When questions combine multiple shapes (very common), the plan should use multiple patterns. "Which distributors are at-risk and where are they geographically concentrated?" = `composite_score` + `breakdown`. "Why did EBITDA miss and which BU was worst?" = `kpi_lookup` + `decomposition` + `breakdown`.

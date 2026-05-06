@@ -355,7 +355,7 @@ def complete_json(
     try:
         return json.loads(_extract_first_json(raw))
     except json.JSONDecodeError:
-        # One retry — re-prompt the model with the bad output and ask for clean JSON.
+        # One retry — re-prompt the model with the non-JSON output and ask for clean JSON.
         retry_user = (
             f"{user}\n\n"
             "Your previous response was not valid JSON. Re-emit the same answer as a "

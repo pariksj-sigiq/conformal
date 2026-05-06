@@ -76,6 +76,47 @@ const ROUTE_LABELS: Record<RouteId, string> = {
   churn: "distributor_health",
 };
 
+const ROUTE_DOMAINS: Record<RouteId, string> = {
+  finance: "Finance",
+  sales: "Sales",
+  targets: "Sales",
+  inventory: "Inventory",
+  collections: "Collections",
+  field_force: "Field force",
+  procurement: "Procurement",
+  regulatory: "Project Leap",
+  commodity: "Markets",
+  nps: "Farmer engagement",
+  microbattle: "Project Leap",
+  churn: "Channel partners",
+};
+
+const TABLE_DOMAINS: Record<string, string> = {
+  fact_finance_pl: "Finance",
+  financial_performance: "Finance",
+  field_force_activity: "Field force",
+  fact_field_visits: "Field force",
+  field_visits_enriched: "Field force",
+  channel_partners: "Channel partners",
+  distributor_health: "Channel partners",
+  procurement_spend: "Procurement",
+  fact_procurement: "Procurement",
+  procurement_enriched: "Procurement",
+  farmer_engagement: "Farmer engagement",
+  commodity_prices: "Markets",
+  fact_commodity_prices: "Markets",
+  wave1_microbattles: "Project Leap",
+  secondary_sales: "Sales",
+  fact_secondary_sales: "Sales",
+  fact_primary_sales: "Sales",
+  sales_enriched: "Sales",
+  channel_flow_monthly: "Sales",
+  fact_targets: "Sales",
+  inventory_enriched: "Inventory",
+  collections_enriched: "Collections",
+  fact_regulatory_pipeline: "Project Leap",
+};
+
 const ROUTE_CATALOG = Object.entries(ROUTE_PROMPTS).map(([route, prompt]) => ({ route, example: prompt, primary_table: ROUTE_LABELS[route as RouteId] }));
 
 export async function* agentEvents(message: string, signal?: AbortSignal): AsyncGenerator<ChatEvent> {
@@ -208,7 +249,7 @@ export async function* agentEvents(message: string, signal?: AbortSignal): Async
   let chart = buildChartFromRows({
     id: `agent-${route}-${Date.now()}`,
     title: titleForRequest(message, route, sql),
-    description: planner.description ?? checker.description ?? `Generated from ${ROUTE_LABELS[route]}`,
+    description: `${ROUTE_DOMAINS[route]} result from executed workbook data.`,
     chartType: inferChartType(rows),
     sql,
     rows,
@@ -230,8 +271,8 @@ export async function* agentEvents(message: string, signal?: AbortSignal): Async
       visual = result.value;
       chart = buildChartFromRows({
         id: chart.id,
-        title: visual.title ?? chart.title,
-        description: visual.description ?? chart.narrative,
+        title: sanitizeBusinessLabel(visual.title ?? chart.title, route),
+        description: sanitizeBusinessText(visual.description ?? chart.narrative, route),
         chartType: visual.chartType ?? inferChartType(rows),
         sql,
         rows,
@@ -347,7 +388,10 @@ async function runVisualAgent(message: string, checker: CheckerOutput, sql: stri
           "Pick the best chart type for the executed result and write the final executive answer.",
           "Return JSON only with keys: title, description, chartType, insight, chartObservations, watchOut.",
           "chartType must be one of line, area, bar, horizontal-bar, scatter.",
-          "chartObservations must be an array of 2-3 strings.",
+          "The final narrative must be at most 3 sentences total, no bullets, no labels like Insight or Chart observations.",
+          "Use ₹ for money. Never use Latin-letter rupee abbreviations.",
+          "The chart title and description must never contain SQL table names or snake_case internal names.",
+          "Use business domains instead: Finance, Field force, Sales, Procurement, Farmer engagement, Markets, Project Leap, Channel partners.",
           `Question: ${message}`,
           `Checker output: ${JSON.stringify(checker, null, 2)}`,
           `SQL: ${sql}`,
@@ -373,16 +417,10 @@ function jsonAgentSystem(agentName: string) {
 }
 
 function finalEventFromVisual(visual: VisualOutput): ChatEvent | null {
-  if (!visual.insight || !Array.isArray(visual.chartObservations) || !visual.chartObservations.length) return null;
+  if (!visual.insight) return null;
   return {
     type: "final",
-    text: [
-      `Insight: ${visual.insight}`,
-      `Chart observations:\n${visual.chartObservations.map((observation) => `- ${observation}`).join("\n")}`,
-      visual.watchOut ? `Watch-out: ${visual.watchOut}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n"),
+    text: composeExecutiveNarrative([visual.insight, visual.watchOut].filter(Boolean).join(" ")),
   };
 }
 
@@ -402,14 +440,13 @@ function fallbackFinalFromRows(route: RouteId, rows: Record<string, unknown>[]):
 
   return {
     type: "final",
-    text: [
+    text: composeExecutiveNarrative(
       riskRow && primaryNumeric && labelColumn
-        ? `Insight: ${String(riskRow[labelColumn])} is the highest-risk row on ${metricLabel(primaryNumeric).toLowerCase()} at ${formatMetricValue(primaryNumeric, Number(riskRow[primaryNumeric] ?? 0))}.`
+        ? `${String(riskRow[labelColumn])} is the highest-risk row on ${metricLabel(primaryNumeric).toLowerCase()} at ${formatMetricValue(primaryNumeric, Number(riskRow[primaryNumeric] ?? 0))}. This needs management attention before the pressure moves into collections or channel confidence.`
         : topRow && primaryNumeric && labelColumn
-          ? `Insight: ${String(topRow[labelColumn])} is the largest contributor on ${metricLabel(primaryNumeric).toLowerCase()}${total ? `; total is ${formatBusinessNumber(total)} across ${rows.length} rows` : ""}.`
-          : `Insight: The agents executed a live SQL query against ${ROUTE_LABELS[route]} and returned ${rows.length} rows for analysis.`,
-      `Chart observations:\n- The chart uses ${labelColumn ? metricLabel(labelColumn) : metricLabel(columns[0] ?? "the category")} on the x-axis and ${primaryNumeric ? metricLabel(primaryNumeric).toLowerCase() : "the selected metric"} on the y-axis.\n- The result columns are: ${columns.map(metricLabel).join(", ") || "none"}.`,
-    ].join("\n\n"),
+          ? `${String(topRow[labelColumn])} is the largest contributor on ${metricLabel(primaryNumeric).toLowerCase()}${total ? `, with ${formatBusinessNumber(total)} across ${rows.length} rows` : ""}. The concentration matters more than the rank because it shows where the next operating lever will have the most effect.`
+          : `${ROUTE_DOMAINS[route]} returned ${rows.length} rows for this question. The result is ready for review, but the metric mix is too broad for a sharper management conclusion without one more cut.`,
+    ),
   };
 }
 
@@ -639,7 +676,7 @@ function metricLabel(key: string) {
   if (normalized === "actual_net_value_inr") return "Actual sales";
   if (normalized === "target_net_value_inr") return "Target sales";
   return labelize(key)
-    .replace(/\bInr\b/g, "INR")
+    .replace(/\bInr\b/g, "")
     .replace(/\bPct\b/g, "%")
     .replace(/\bEbitda\b/g, "EBITDA")
     .replace(/\bNps\b/g, "NPS");
@@ -656,6 +693,43 @@ function formatMetricValue(metric: string, value: number) {
   if (/pct|percent|rate/i.test(metric)) return `${value.toFixed(1).replace(/\.0$/, "")}%`;
   if (/value|revenue|sales|invoice|ebitda|spend|inr/i.test(metric)) return formatBusinessNumber(value);
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(value);
+}
+
+function sanitizeBusinessLabel(value: string, route: RouteId) {
+  const sanitized = sanitizeBusinessText(value, route);
+  return sanitized && !/[_][a-z0-9]|fact_|dim_|enriched|sql/i.test(sanitized) ? sanitized : titleForRoute(route);
+}
+
+function sanitizeBusinessText(value: string, route: RouteId) {
+  return value
+    .replace(/\bRs\.?\s*/gi, "₹")
+    .replace(/\bINR\b/g, "₹")
+    .replace(tablePattern(), (match) => TABLE_DOMAINS[match.toLowerCase()] ?? ROUTE_DOMAINS[route])
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function composeExecutiveNarrative(value: string) {
+  const decimalToken = "__DECIMAL_DOT__";
+  const cleaned = value
+    .replace(/\b(?:Insight|Chart observations?|Watch-out)\s*:\s*/gi, "")
+    .replace(/^\s*[-•]\s*/gm, "")
+    .replace(/\bRs\.?\s*/gi, "₹")
+    .replace(/\bINR\b/g, "₹")
+    .replace(tablePattern(), (match) => TABLE_DOMAINS[match.toLowerCase()] ?? "Analysis")
+    .replace(/\s+/g, " ")
+    .trim();
+  const protectedDecimals = cleaned.replace(/(\d)\.(\d)/g, `$1${decimalToken}$2`);
+  const sentences =
+    protectedDecimals
+      .match(/[^.!?]+[.!?]+|[^.!?]+$/g)
+      ?.map((sentence) => sentence.replaceAll(decimalToken, ".").trim())
+      .filter(Boolean) ?? [cleaned];
+  return sentences.slice(0, 3).join(" ");
+}
+
+function tablePattern() {
+  return /\b(FACT_FINANCE_PL|fact_finance_pl|financial_performance|field_force_activity|fact_field_visits|channel_partners|distributor_health|procurement_spend|fact_procurement|procurement_enriched|farmer_engagement|commodity_prices|fact_commodity_prices|wave1_microbattles|secondary_sales|fact_secondary_sales|fact_primary_sales|sales_enriched|inventory_enriched|collections_enriched|field_visits_enriched|channel_flow_monthly|fact_targets|fact_regulatory_pipeline)\b/gi;
 }
 
 async function timed<T>(fn: () => Promise<T>): Promise<TimedResult<T>> {

@@ -556,10 +556,15 @@ function trimNumber(value: number) {
 
 function inferDomain(chart: ChartBundle, tables: string[]) {
   const text = `${chart.title} ${tables.join(" ")}`.toLowerCase();
-  if (text.includes("field")) return "Field Force";
+  if (text.includes("fact_finance_pl") || text.includes("financial_performance") || text.includes("finance") || text.includes("revenue") || text.includes("ebitda")) return "Finance";
+  if (text.includes("field_visits_enriched") || text.includes("field_force_activity") || text.includes("fact_field_visits") || text.includes("field")) return "Field force";
+  if (text.includes("channel_partners") || text.includes("distributor_health") || text.includes("channel")) return "Channel partners";
+  if (text.includes("procurement_enriched") || text.includes("procurement_spend") || text.includes("fact_procurement") || text.includes("procurement")) return "Procurement";
+  if (text.includes("farmer_engagement") || text.includes("farmer")) return "Farmer engagement";
+  if (text.includes("commodity_prices") || text.includes("fact_commodity_prices") || text.includes("commodity")) return "Markets";
+  if (text.includes("wave1_microbattles") || text.includes("project leap") || text.includes("microbattle")) return "Project Leap";
+  if (text.includes("sales_enriched") || text.includes("secondary_sales") || text.includes("primary_sales") || text.includes("sales")) return "Sales";
   if (text.includes("churn") || text.includes("channel")) return "North Zone";
-  if (text.includes("procurement")) return "Procurement";
-  if (text.includes("nps") || text.includes("farmer")) return "Farmer Engagement";
-  if (text.includes("commodity")) return "Markets";
-  return tables.length ? tables.join(", ") : "Analysis";
+  if (text.includes("nps")) return "Farmer engagement";
+  return "Analysis";
 }

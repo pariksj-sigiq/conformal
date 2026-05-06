@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, CirclePlus, Loader2, Send, Wrench } from "lucide-react";
+import { CirclePlus, Loader2, Send } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -198,13 +198,11 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
                 <div className="message-body">
                   {message.role === "user" ? <p className="user-question">{message.content}</p> : null}
                   {message.trace?.length ? <TraceSummary trace={message.trace} /> : null}
-                  {message.charts?.length ? <ChartBadges count={message.charts.length} /> : null}
                   {message.role === "assistant" ? (
                     <p className={cn("answer-copy", !message.content && isSending && "answer-copy-loading")} aria-live="polite">
                       {message.content || (isSending ? processingInsightFromTrace(message.trace, processingStatus) : "")}
                     </p>
                   ) : null}
-                  {message.trace?.length ? <ToolTrace trace={message.trace} /> : null}
                 </div>
               </motion.article>
             ))}
@@ -293,7 +291,8 @@ function WelcomeState({ onPickPrompt }: { onPickPrompt: (prompt: string) => void
 }
 
 function TraceSummary({ trace }: { trace: TraceEvent[] }) {
-  const total = trace.reduce((sum, item) => {
+  const completedSteps = trace.filter((item) => item.type !== "tool_start" && !item.id.startsWith("sql-"));
+  const total = completedSteps.reduce((sum, item) => {
     if (typeof item.durationMs === "number") return sum + item.durationMs;
     const match = item.detail?.match(/(\d+)ms/);
     return sum + (match ? Number(match[1]) : 0);
@@ -302,19 +301,14 @@ function TraceSummary({ trace }: { trace: TraceEvent[] }) {
   return (
     <div className="trace-summary">
       <CirclePlus size={15} />
-      {trace.length} tool calls · {total || 182}ms
+      {completedSteps.length || trace.length} tool calls · {formatTraceDuration(total || 182)}
     </div>
   );
 }
 
-function ChartBadges({ count }: { count: number }) {
-  return (
-    <div className="chart-badges">
-      {Array.from({ length: count }).map((_, index) => (
-        <span key={index}>Chart {index + 1}</span>
-      ))}
-    </div>
-  );
+function formatTraceDuration(ms: number) {
+  if (ms >= 1000) return `${(ms / 1000).toFixed(ms >= 10_000 ? 1 : 2).replace(/\.0$/, "")}s`;
+  return `${ms}ms`;
 }
 
 type KpiCard = {
@@ -450,7 +444,7 @@ function trendTone(rows: Record<string, unknown>[], column: string): KpiCard["to
 }
 
 function formatInCrore(value: number): Pick<KpiCard, "value" | "unit"> {
-  return { value: `Rs ${formatNumber(value / 10_000_000, 1)}`, unit: "Cr" };
+  return { value: `₹${formatNumber(value / 10_000_000, 1)}`, unit: "Cr" };
 }
 
 function formatMetricValue(column: string, value: number): Pick<KpiCard, "value" | "unit"> {
@@ -497,34 +491,6 @@ function formatPeriodLabel(value: string) {
   if (!monthMatch) return value;
   const date = new Date(`${value}-01T00:00:00`);
   return date.toLocaleString("en-IN", { month: "short", year: "numeric" });
-}
-
-function ToolTrace({ trace }: { trace: TraceEvent[] }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="tool-trace">
-      <button type="button" onClick={() => setOpen((current) => !current)}>
-        <Wrench size={14} />
-        Trace
-        <ChevronDown size={14} className={cn(open && "rotate-180")} />
-      </button>
-      {open ? (
-        <div className="trace-items">
-          {trace.map((item, index) => (
-            <details key={`${item.id}-${item.type}-${index}`} open={item.status === "error"}>
-              <summary>
-                <span data-status={item.status ?? "complete"} />
-                {item.label}
-              </summary>
-              {item.detail ? <p>{item.detail}</p> : null}
-              {item.payload ? <pre>{JSON.stringify(item.payload, null, 2)}</pre> : null}
-            </details>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
 }
 
 export async function consumeNdjson(stream: ReadableStream<Uint8Array>, onEvent: (eventData: Record<string, unknown>) => void) {

@@ -66,15 +66,11 @@ function agenticTrace(table: string, description: string, visual: string): ChatE
 }
 
 function finalResponse(insight: string, chartObservations: string[], watchOut?: string): ChatEvent {
+  const text = [insight, chartObservations[0], watchOut].filter(Boolean).join(" ");
+  const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [text];
   return {
     type: "final",
-    text: [
-      `Insight: ${insight}`,
-      `Chart observations:\n${chartObservations.map((observation) => `- ${observation}`).join("\n")}`,
-      watchOut ? `Watch-out: ${watchOut}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n"),
+    text: sentences.slice(0, 3).join(" "),
   };
 }
 

@@ -52,7 +52,12 @@ export async function POST(request: Request) {
 }
 
 function backendBaseUrl() {
-  if (process.env.ECEO_BACKEND_DISABLED === "1") return "";
+  if (process.env.ECEO_BACKEND_DISABLED === "1") {
+    if (process.env.ECEO_BACKEND_REQUIRED === "1") {
+      throw new Error("ECEO_BACKEND_REQUIRED=1 but ECEO_BACKEND_DISABLED=1.");
+    }
+    return "";
+  }
   return (process.env.ECEO_BACKEND_URL ?? process.env.BACKEND_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "");
 }
 

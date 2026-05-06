@@ -10,6 +10,7 @@ import os
 import pytest
 
 from backend.agents.analysis_planner import plan as run_plan
+from backend.agents import interpreter as interpreter_agent
 from backend.agents.interpreter import interpret
 from backend.agents.presentation import design
 from backend.agents.query_executor import execute
@@ -36,6 +37,19 @@ def test_interpreter_ambiguous_question():
     assert result.intent_understood is False
     assert result.clarifying_question
     assert result.options_for_user and len(result.options_for_user) >= 2
+
+
+def test_interpreter_falls_back_on_azure_content_filter(monkeypatch: pytest.MonkeyPatch):
+    def blocked(*_args, **_kwargs):
+        raise RuntimeError("Azure OpenAI 400: content_filter")
+
+    monkeypatch.setattr(interpreter_agent, "complete_json", blocked)
+
+    result = interpret("Show me revenue and EBITDA for the last two quarters")
+
+    assert result.intent_understood is True
+    assert result.interpreted_question == "Show me revenue and EBITDA for the last two quarters"
+    assert any("Q3 FY26 and Q4 FY26" in assumption for assumption in result.implicit_assumptions)
 
 
 @requires_api

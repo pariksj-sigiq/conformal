@@ -81,7 +81,7 @@ export function DashboardGrid() {
         </Link>
         <div>
           <span>Pinned board</span>
-          <h1>Executive dashboard</h1>
+          <h1>Saved reports</h1>
         </div>
         <button type="button" className={cn("live-toggle", live && "live-toggle-on")} onClick={() => setLive((current) => !current)}>
           <span />
@@ -100,7 +100,7 @@ export function DashboardGrid() {
       ) : (
         <section className="dashboard-empty">
           <LayoutDashboard size={28} />
-          <h2>No pinned charts yet</h2>
+          <h2>No saved reports yet</h2>
           <p>Pin charts from the cockpit canvas to build a live board for recurring operating reviews.</p>
           <Link href="/">Open cockpit</Link>
         </section>

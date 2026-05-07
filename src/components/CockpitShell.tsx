@@ -79,9 +79,9 @@ export function CockpitShell() {
             <MessageSquare size={17} />
             <span>Chat</span>
           </a>
-          <Link href="/dashboard" title="Dashboard">
+          <Link href="/dashboard" title="Saved Reports">
             <BarChart3 size={17} />
-            <span>Dashboard</span>
+            <span>Saved Reports</span>
           </Link>
         </nav>
 
@@ -105,7 +105,7 @@ export function CockpitShell() {
           <h2>Pinned</h2>
           <Link href="/dashboard" className="pinned-link">
             <BarChart3 size={15} />
-            <span>Main dashboard</span>
+            <span>Saved reports</span>
           </Link>
         </section>
       </aside>
@@ -288,13 +288,13 @@ function MobileHome({ onAsk }: { onAsk: (prompt: string) => void }) {
         </article>
       </section>
 
-      <section className={cn("mobile-home-build", intro.complete && "mobile-home-build-complete")} aria-live="polite" aria-label="Question generation status">
-        <strong>{intro.complete ? "Questions ready" : "Building questions"}</strong>
+      <section className={cn("mobile-home-build", intro.complete && "mobile-home-build-complete")} aria-live="polite" aria-label="Knowledge base generation status">
+        <strong>{intro.complete ? "Knowledge base ready" : "Building knowledge base"}</strong>
         <span>{intro.complete ? "Source trails and chart rationale are locked." : questionBankBuildSteps[intro.currentStep]}</span>
       </section>
 
-      <section className="mobile-home-list" aria-label="Business questions">
-        <h2>Business questions</h2>
+      <section className="mobile-home-list" aria-label="Suggested Cards">
+        <h2>Suggested Cards</h2>
         {businessStarters.slice(0, 3).map((starter, index) =>
           index < intro.revealedCount ? (
             <button type="button" key={starter.prompt} onClick={() => onAsk(starter.prompt)}>

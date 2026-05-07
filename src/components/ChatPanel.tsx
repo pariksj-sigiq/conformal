@@ -1,7 +1,8 @@
 "use client";
 
 import { CirclePlus, Loader2, Send } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { PromptInput, PromptInputActions, PromptInputTextarea } from "@/components/ui/prompt-input";
@@ -568,42 +569,31 @@ export function ChatPanel({ live, pinnedIds, onPinChart, onWorkspaceActiveChange
             })}
           </div>
         ) : (
-          <WelcomeState onPickPrompt={(prompt) => void submitPrompt(undefined, prompt)} />
+          <WelcomeState
+            onPickPrompt={(prompt) => void submitPrompt(undefined, prompt)}
+            composer={
+              <ChatComposer
+                input={input}
+                isSending={isSending}
+                hasConversation={hasConversation}
+                onInputChange={setInput}
+                onSubmit={() => void submitPrompt()}
+                onPickPrompt={(prompt) => void submitPrompt(undefined, prompt)}
+              />
+            }
+          />
         )}
 
-        <div className="chat-composer">
-          {hasConversation ? (
-            <div className="starter-row" aria-label="Suggested follow-up prompts">
-              {followUpStarters.map((starter) => (
-                <button type="button" key={starter.prompt} onClick={() => void submitPrompt(undefined, starter.prompt)}>
-                  {starter.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          <PromptInput
-            className="prompt-box"
-            value={input}
-            onValueChange={setInput}
+        {hasConversation ? (
+          <ChatComposer
+            input={input}
+            isSending={isSending}
+            hasConversation={hasConversation}
+            onInputChange={setInput}
             onSubmit={() => void submitPrompt()}
-            isLoading={isSending}
-            disabled={isSending}
-            maxHeight={132}
-          >
-            <PromptInputTextarea
-              suppressHydrationWarning
-              placeholder="Or ask your own question..."
-              aria-label="Ask Project Leap"
-            />
-            <PromptInputActions className="prompt-actions">
-              <span className="prompt-hint">Enter to send · Shift Enter for a new line</span>
-              <button type="button" className="prompt-submit" disabled={!input.trim() || isSending} title="Send prompt" onClick={() => void submitPrompt()}>
-                {isSending ? <Loader2 size={18} className="animate-spin" /> : <><span>Ask</span><Send size={18} /></>}
-              </button>
-            </PromptInputActions>
-          </PromptInput>
-        </div>
+            onPickPrompt={(prompt) => void submitPrompt(undefined, prompt)}
+          />
+        ) : null}
       </section>
 
       <section className="canvas-pane">
@@ -623,6 +613,58 @@ export function ChatPanel({ live, pinnedIds, onPinChart, onWorkspaceActiveChange
           )}
         </div>
       </section>
+    </div>
+  );
+}
+
+function ChatComposer({
+  input,
+  isSending,
+  hasConversation,
+  onInputChange,
+  onSubmit,
+  onPickPrompt,
+}: {
+  input: string;
+  isSending: boolean;
+  hasConversation: boolean;
+  onInputChange: (value: string) => void;
+  onSubmit: () => void;
+  onPickPrompt: (prompt: string) => void;
+}) {
+  return (
+    <div className="chat-composer">
+      {hasConversation ? (
+        <div className="starter-row" aria-label="Suggested follow-up prompts">
+          {followUpStarters.map((starter) => (
+            <button type="button" key={starter.prompt} onClick={() => onPickPrompt(starter.prompt)}>
+              {starter.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <PromptInput
+        className="prompt-box"
+        value={input}
+        onValueChange={onInputChange}
+        onSubmit={onSubmit}
+        isLoading={isSending}
+        disabled={isSending}
+        maxHeight={132}
+      >
+        <PromptInputTextarea
+          suppressHydrationWarning
+          placeholder="Or ask your own question..."
+          aria-label="Ask Project Leap"
+        />
+        <PromptInputActions className="prompt-actions">
+          <span className="prompt-hint">Enter to send · Shift Enter for a new line</span>
+          <button type="button" className="prompt-submit" disabled={!input.trim() || isSending} title="Send prompt" onClick={onSubmit}>
+            {isSending ? <Loader2 size={18} className="animate-spin" /> : <><span>Ask</span><Send size={18} /></>}
+          </button>
+        </PromptInputActions>
+      </PromptInput>
     </div>
   );
 }
@@ -750,13 +792,13 @@ function renderMarkdownInline(text: string) {
   });
 }
 
-function WelcomeState({ onPickPrompt }: { onPickPrompt: (prompt: string) => void }) {
+function WelcomeState({ onPickPrompt, composer }: { onPickPrompt: (prompt: string) => void; composer: ReactNode }) {
   const intro = useQuestionBankIntro(businessStarters.length);
 
   return (
     <div className="welcome-state">
       <div className="welcome-copy">
-        <span>Leadership question bank</span>
+        <span>Leadership knowledge base</span>
         <h1>
           Leadership questions, <em>ready</em>
         </h1>
@@ -764,10 +806,11 @@ function WelcomeState({ onPickPrompt }: { onPickPrompt: (prompt: string) => void
       </div>
 
       <QuestionBankBuildLog currentStep={intro.currentStep} complete={intro.complete} />
+      {composer}
 
       <div className="query-bank">
         <PromptSection
-          title="P0 business questions"
+          title="Suggested Cards"
           count={businessStarters.length}
           revealedCount={intro.revealedCount}
           starters={businessStarters}
@@ -782,9 +825,9 @@ function QuestionBankBuildLog({ currentStep, complete }: { currentStep: number; 
   const progress = complete ? 100 : Math.min(92, Math.round(((currentStep + 1) / questionBankBuildSteps.length) * 100));
 
   return (
-    <section className={cn("question-bank-build", complete && "question-bank-build-complete")} aria-live="polite" aria-label="Question bank generation status">
+    <section className={cn("question-bank-build", complete && "question-bank-build-complete")} aria-live="polite" aria-label="Knowledge base generation status">
       <div className="build-copy">
-        <strong>{complete ? "Question bank ready" : "Building question bank"}</strong>
+        <strong>{complete ? "Knowledge base ready" : "Building knowledge base"}</strong>
         <div className="build-progress" aria-hidden="true">
           <span style={{ width: `${progress}%` }} />
         </div>

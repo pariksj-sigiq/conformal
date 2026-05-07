@@ -26,35 +26,35 @@ DEMO_QUESTIONS = [
     {
         "id": "Q1_fy26_close",
         "question": "How is FY26 closing? Where are we vs plan?",
-        "min_analyses": 2,
+        "min_analyses": 4,
         "max_analyses": 4,
         "must_mention": ["FY26"],
     },
     {
         "id": "Q2_distributor_health",
         "question": "Show me distributors who are buying less, paying late, and selling slow",
-        "min_analyses": 1,
+        "min_analyses": 3,
         "max_analyses": 4,
         "must_mention": ["distributor"],
     },
     {
         "id": "Q3_procurement_premium",
         "question": "Are we paying above market on any raw material?",
-        "min_analyses": 1,
+        "min_analyses": 3,
         "max_analyses": 4,
         "must_mention": ["Glyphosate"],
     },
     {
         "id": "Q4_regulatory_pipeline",
         "question": "What's in our regulatory pipeline?",
-        "min_analyses": 1,
+        "min_analyses": 3,
         "max_analyses": 4,
         "must_mention": ["pipeline"],
     },
     {
         "id": "Q5_q2_ebitda_miss",
         "question": "Why did Q2 FY26 EBITDA miss budget?",
-        "min_analyses": 2,
+        "min_analyses": 4,
         "max_analyses": 4,
         "must_mention": ["EBITDA"],
     },
@@ -92,7 +92,7 @@ def test_demo_question(case, db):
             f"narrative did not mention {needle!r}; got: {narrative[:200]}"
         )
 
-    # Layout should have at least one visual; chart_specs match 1:1.
+    # Layout should have enough visual evidence; chart_specs match 1:1.
     assert state.presentation.layout
     assert len(specs) == len(state.presentation.layout)
-    assert len(state.presentation.layout) <= 4
+    assert 3 <= len(state.presentation.layout) <= 5

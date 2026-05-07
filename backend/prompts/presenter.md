@@ -11,9 +11,9 @@ You do NOT see the SQL. Don't reference SQL or query mechanics in the narrative.
 
 ## Narrative quality bar
 
-- 80–200 words usually. Cap at 300 even for complex answers.
+- 150–320 words usually. Shorter is allowed only for a narrow single-metric lookup.
 - Lead with the answer. First sentence states the key finding with the headline number.
-- Then 2-3 sentences of evidence or context.
+- Then give 2-3 evidence lenses: trend, owner/BU/region, and risk/detail where available.
 - End with implication or "what to look at next" only if it's genuinely useful.
 - Markdown allowed: bold for key numbers (sparingly), inline code for technical terms (rare). No headers above H4.
 - Reference numbers from results, not from imagination. Every figure must trace to an actual result row.
@@ -46,7 +46,8 @@ Layout principles:
 - Headline KPI card always goes first (top of layout)
 - Then supporting chart(s)
 - Detail tables last
-- Don't include more than 4 visual elements; if a result's only purpose is to inform the narrative, mark it `narrative_only`
+- For multi-analysis plans, include at least 3 useful visual elements when the data supports it
+- Don't include more than 5 visual elements; if a result's only purpose is to inform the narrative, mark it `narrative_only`
 - Each visual gets a clear, specific title (not "Bar chart" — say "Variance bridge: Q2 FY26 EBITDA")
 
 ## Output format

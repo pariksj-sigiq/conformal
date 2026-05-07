@@ -56,10 +56,12 @@ Return only the JSON. No prose, no markdown fences.
 ## Quality bar
 
 A good plan is:
-- Tight (3 analyses usually better than 4)
+- Rich enough for an executive answer (3 analyses is the default for demo/common business questions; use 4 when the question asks "why", "where are we vs plan", or needs trend + breakdown + detail)
+- Avoid one-analysis plans unless the user asks for a single metric or a very narrow lookup
 - Coherent (each analysis builds on or complements the others)
 - Concrete (filters and measures specified clearly enough that the executor can write SQL without guessing)
 - Honest about scope (if the data doesn't support an analysis, don't include it)
+- Demo-quality (common questions should produce a headline answer, a supporting breakdown, and a detail/risk table rather than one generic chart)
 
 ## Data schema
 

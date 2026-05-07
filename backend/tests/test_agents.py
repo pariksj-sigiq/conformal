@@ -94,6 +94,30 @@ def test_interpreter_accepts_fy26_close_demo_prompt_without_clarifying(monkeypat
     assert any("full-year FY26" in assumption for assumption in result.implicit_assumptions)
 
 
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Show me the revenue and EBITDA time series.",
+        "Show me procurement savings vs target by category. Time period: FY26 year-to-date",
+        "Show me distributors who are buying less, paying late, and selling slow",
+        "How is the field force tracking this quarter?",
+        "What's in our regulatory pipeline?",
+        "Why did Q2 FY26 EBITDA miss budget?",
+    ],
+)
+def test_interpreter_accepts_common_demo_prompts_without_clarifying(question: str, monkeypatch: pytest.MonkeyPatch):
+    def should_not_call_llm(*_args, **_kwargs):
+        pytest.fail("common demo prompts should use deterministic interpretation")
+
+    monkeypatch.setattr(interpreter_agent, "complete_json", should_not_call_llm)
+
+    result = interpret(question)
+
+    assert result.intent_understood is True
+    assert result.interpreted_question == question
+    assert result.clarifying_question is None
+
+
 def test_planner_falls_back_on_azure_content_filter(monkeypatch: pytest.MonkeyPatch):
     def blocked(*_args, **_kwargs):
         raise RuntimeError("Azure OpenAI 400: content_filter")
@@ -104,6 +128,7 @@ def test_planner_falls_back_on_azure_content_filter(monkeypatch: pytest.MonkeyPa
 
     assert result.analyses[0].tables_needed == ["fact_finance_pl"]
     assert result.analyses[0].filters["fiscal_quarter"] == "Q3|Q4"
+    assert len(result.analyses) >= 3
 
 
 def test_planner_procurement_fallback_for_ytd(monkeypatch: pytest.MonkeyPatch):
@@ -116,8 +141,10 @@ def test_planner_procurement_fallback_for_ytd(monkeypatch: pytest.MonkeyPatch):
 
     analysis = result.analyses[0]
     assert analysis.tables_needed == ["fact_procurement"]
-    assert analysis.filters == {"fiscal_year": "FY26"}
+    assert analysis.filters["fiscal_year"] == "FY26"
+    assert analysis.filters["commodity_link"] == "NOT NULL"
     assert "savings_vs_market_cr" in " ".join(analysis.measures)
+    assert len(result.analyses) >= 3
 
 
 def test_planner_falls_back_on_provider_timeout(monkeypatch: pytest.MonkeyPatch):

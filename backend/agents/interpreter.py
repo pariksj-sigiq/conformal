@@ -96,16 +96,46 @@ def _deterministic_demo_interpretation(question: str, history: list[Message] | N
     cleaned = _contextual_question(" ".join(question.split()).strip(), history or [])
     lower = cleaned.lower()
     asks_fy26_close = "fy26" in lower and any(token in lower for token in ("closing", "close", "vs plan", "where are we"))
-    if not asks_fy26_close:
+    asks_finance_trend = any(token in lower for token in ("revenue over last 12 months", "revenue and ebitda time series", "time series"))
+    asks_procurement = any(token in lower for token in ("procurement", "raw material", "above market", "premium vs market"))
+    asks_distributor = any(token in lower for token in ("distributor", "paying late", "selling slow", "dso"))
+    asks_field_force = any(token in lower for token in ("field force", "visit", "coverage"))
+    asks_regulatory = any(token in lower for token in ("regulatory", "pipeline", "registration"))
+    asks_ebitda_variance = "ebitda" in lower and any(token in lower for token in ("miss", "budget", "variance", "why"))
+
+    if not any(
+        (
+            asks_fy26_close,
+            asks_finance_trend,
+            asks_procurement,
+            asks_distributor,
+            asks_field_force,
+            asks_regulatory,
+            asks_ebitda_variance,
+        )
+    ):
         return None
+
+    assumptions = ["Money values should be reported in INR crores where applicable."]
+    if asks_fy26_close:
+        assumptions.insert(0, "FY26 closing means full-year FY26 performance against plan, with Q4 close risk called out.")
+    elif asks_finance_trend:
+        assumptions.insert(0, "Last 12 months means FY26, Apr 2025-Mar 2026, unless the user specifies another period.")
+    elif asks_procurement:
+        assumptions.insert(0, "Procurement market comparison should use market-linked FY26 raw materials and exclude non-tradable rows.")
+    elif asks_distributor:
+        assumptions.insert(0, "Distributor risk combines buying decline, late payment, sell-through, and aging inventory.")
+    elif asks_field_force:
+        assumptions.insert(0, "This quarter means the latest available quarter, Q4 FY26.")
+    elif asks_regulatory:
+        assumptions.insert(0, "Regulatory pipeline means filed and under-review registrations, with approved items treated as context.")
+    elif asks_ebitda_variance:
+        assumptions.insert(0, "Q2 means Q2 FY26, and miss means actual EBITDA below budget.")
 
     return InterpretationResult(
         intent_understood=True,
         interpreted_question=cleaned,
-        implicit_assumptions=[
-            "FY26 closing means full-year FY26 performance against plan, with Q4 close risk called out.",
-            "Money values should be reported in INR crores where applicable.",
-        ],
+        implicit_assumptions=assumptions,
         clarifying_question=None,
         options_for_user=None,
     )

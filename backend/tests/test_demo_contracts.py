@@ -26,44 +26,58 @@ DEMO_CONTRACTS = [
     {
         "id": "revenue_12_months",
         "question": "revenue over last 12 months",
-        "visual_types": {"line_chart"},
-        "must_mention": ["revenue"],
+        "visual_types": {"line_chart", "bar_chart", "table"},
+        "must_mention": ["revenue", "month"],
+        "min_analyses": 3,
+        "min_visuals": 3,
     },
     {
         "id": "finance_time_series",
         "question": "Show me the revenue and EBITDA time series.",
-        "visual_types": {"line_chart"},
+        "visual_types": {"line_chart", "bar_chart", "table"},
         "must_mention": ["revenue", "EBITDA"],
+        "min_analyses": 3,
+        "min_visuals": 3,
     },
     {
         "id": "procurement_category",
         "question": "Show me procurement savings vs target by category. Time period: FY26 year-to-date",
-        "visual_types": {"bar_chart"},
-        "must_mention": ["procurement"],
+        "visual_types": {"bar_chart", "line_chart", "table"},
+        "must_mention": ["procurement", "market"],
+        "min_analyses": 3,
+        "min_visuals": 3,
     },
     {
         "id": "distributor_risk",
         "question": "Show me distributors who are buying less, paying late, and selling slow",
         "visual_types": {"bar_chart", "table"},
-        "must_mention": ["distributor"],
+        "must_mention": ["distributor", "risk"],
+        "min_analyses": 3,
+        "min_visuals": 3,
     },
     {
         "id": "field_force_q4",
         "question": "How is the field force tracking this quarter?",
-        "visual_types": {"bar_chart", "line_chart"},
-        "must_mention": ["field"],
+        "visual_types": {"bar_chart", "line_chart", "table"},
+        "must_mention": ["field", "visit"],
+        "min_analyses": 3,
+        "min_visuals": 3,
     },
     {
         "id": "regulatory_pipeline",
         "question": "What's in our regulatory pipeline?",
         "visual_types": {"bar_chart", "table"},
-        "must_mention": ["pipeline"],
+        "must_mention": ["pipeline", "uplift"],
+        "min_analyses": 3,
+        "min_visuals": 3,
     },
     {
         "id": "ebitda_variance",
         "question": "Why did Q2 FY26 EBITDA miss budget?",
         "visual_types": {"bar_chart", "table"},
-        "must_mention": ["EBITDA"],
+        "must_mention": ["EBITDA", "budget", "Q2"],
+        "min_analyses": 3,
+        "min_visuals": 3,
     },
 ]
 
@@ -99,6 +113,8 @@ def test_demo_question_has_answer_and_usable_visual(case, db):
 
     assert state.presentation is not None
     assert state.presentation.narrative.strip()
+    assert len(state.presentation.narrative) >= case.get("min_narrative_chars", 350)
+    assert state.presentation.narrative.count("\n\n") >= case.get("min_paragraph_breaks", 1)
     for needle in case["must_mention"]:
         assert needle.lower() in state.presentation.narrative.lower()
 

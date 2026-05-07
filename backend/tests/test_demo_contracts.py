@@ -18,8 +18,10 @@ DEMO_CONTRACTS = [
     {
         "id": "fy26_close_vs_plan",
         "question": "How is FY26 closing? Where are we vs plan?",
-        "visual_types": {"bar_chart"},
-        "must_mention": ["FY26", "plan", "shortfall"],
+        "visual_types": {"bar_chart", "stacked_bar", "table"},
+        "must_mention": ["FY26", "plan", "EBITDA", "Q4"],
+        "min_analyses": 4,
+        "min_visuals": 4,
     },
     {
         "id": "revenue_12_months",
@@ -90,7 +92,7 @@ def test_demo_question_has_answer_and_usable_visual(case, db):
     assert state.interpretation.intent_understood is True
 
     assert state.plan is not None
-    assert 1 <= len(state.plan.analyses) <= 4
+    assert case.get("min_analyses", 1) <= len(state.plan.analyses) <= 4
 
     successful_results = [result for result in state.query_results if result.success and result.rows]
     assert successful_results, "no executed analysis returned data"
@@ -102,6 +104,7 @@ def test_demo_question_has_answer_and_usable_visual(case, db):
 
     assert specs
     assert len(specs) == len(state.presentation.layout)
+    assert len(specs) >= case.get("min_visuals", 1)
     assert any(spec.type in case["visual_types"] for spec in specs)
     assert any(is_usable_visual(spec) for spec in specs), [
         spec.model_dump() for spec in specs

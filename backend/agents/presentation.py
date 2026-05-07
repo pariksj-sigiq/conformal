@@ -171,34 +171,44 @@ def _deterministic_demo_presentation(interpreted_question: str, results: list[Qu
     if not ("fy26" in lower and any(token in lower for token in ("closing", "close", "vs plan", "where are we"))):
         return None
 
-    result = next((item for item in results if item.analysis_id == "fy26_close_1" and item.success and item.rows), None)
-    if not result:
+    revenue_result = _successful_result(results, "fy26_close_1")
+    pnl_result = _successful_result(results, "fy26_close_2")
+    q4_result = _successful_result(results, "fy26_close_3")
+    trend_result = _successful_result(results, "fy26_close_4")
+    if not revenue_result or not pnl_result or not q4_result:
         return None
 
-    rows = result.rows
-    actual = sum(float(row.get("actual_revenue_cr") or 0) for row in rows)
-    target = sum(float(row.get("target_revenue_cr") or 0) for row in rows)
-    shortfall = actual - target
+    revenue_rows = revenue_result.rows
+    pnl_rows = pnl_result.rows
+    q4_rows = q4_result.rows
+
+    actual = sum(float(row.get("actual_revenue_cr") or 0) for row in revenue_rows)
+    target = sum(float(row.get("target_revenue_cr") or 0) for row in revenue_rows)
+    shortfall = target - actual
     achievement = actual / target * 100 if target else 0
-    row_achievement = {
-        str(row.get("fiscal_quarter")): (
-            float(row.get("actual_revenue_cr") or 0) / float(row.get("target_revenue_cr") or 1) * 100
-        )
-        for row in rows
-    }
-    weakest = min(rows, key=lambda row: row_achievement.get(str(row.get("fiscal_quarter")), 0))
-    best = max(rows, key=lambda row: row_achievement.get(str(row.get("fiscal_quarter")), 0))
-    weakest_pct = row_achievement.get(str(weakest.get("fiscal_quarter")), 0)
-    best_pct = row_achievement.get(str(best.get("fiscal_quarter")), 0)
+    largest_revenue_miss = min(pnl_rows, key=lambda row: float(row.get("revenue_variance_cr") or 0))
+    largest_ebitda_miss = min(pnl_rows, key=lambda row: float(row.get("ebitda_variance_cr") or 0))
+    lowest_ebitda = min(pnl_rows, key=lambda row: float(row.get("actual_ebitda_cr") or 0))
+    spn_row = next((row for row in pnl_rows if row.get("business_unit") == "SPN"), {})
+    bulkfert_row = next((row for row in pnl_rows if row.get("business_unit") == "BulkFert"), None)
+    q4_lowest = min(q4_rows, key=lambda row: float(row.get("q4_achievement_pct") or 0))
+    all_q4_behind = all(float(row.get("q4_achievement_pct") or 0) < 100 for row in q4_rows)
 
     narrative = (
-        f"FY26 is closing at **₹{actual:,.1f} Cr**, against a plan of **₹{target:,.1f} Cr**. "
-        f"That is **{achievement:.1f}% achievement**, leaving a shortfall of **₹{abs(shortfall):,.1f} Cr** versus plan.\n\n"
-        f"The miss is broad-based rather than one isolated quarter: every quarter is around 89-91% of plan. "
-        f"The weakest quarter is **{weakest.get('fiscal_quarter')}** at **{weakest_pct:.1f}%** achievement, "
-        f"while the best is **{best.get('fiscal_quarter')}** at **{best_pct:.1f}%**.\n\n"
-        "The readout is therefore not just “growth happened”; it is that FY26 growth is still below the committed plan, "
-        "so the next drill-down should isolate whether the gap is coming from category mix, regional execution, or channel inventory."
+        f"FY26 closed at **₹{actual:,.1f} Cr** against a plan of **₹{target:,.1f} Cr**: "
+        f"**{achievement:.1f}% achievement** and a **₹{shortfall:,.1f} Cr shortfall**. "
+        f"The revenue miss is broad-based rather than one isolated pocket; {largest_revenue_miss.get('business_unit')} carries the largest BU-level revenue gap "
+        f"at **₹{abs(float(largest_revenue_miss.get('revenue_variance_cr') or 0)):,.1f} Cr**.\n\n"
+        f"On EBITDA, every BU is behind budget. {largest_ebitda_miss.get('business_unit')} has the largest absolute EBITDA erosion "
+        f"at **₹{abs(float(largest_ebitda_miss.get('ebitda_variance_cr') or 0)):,.1f} Cr**, while {lowest_ebitda.get('business_unit')} is loss-making at "
+        f"**-₹{abs(float(lowest_ebitda.get('actual_ebitda_cr') or 0)):,.1f} Cr EBITDA**. "
+        f"SPN is structurally important because it flipped from a budgeted **₹{float(spn_row.get('budget_ebitda_cr') or 0):,.1f} Cr** EBITDA to "
+        f"**-₹{abs(float(spn_row.get('actual_ebitda_cr') or 0)):,.1f} Cr** actual.\n\n"
+        f"Regionally, achievement stays in a tight band of roughly **89-95%**, so the issue is not one geography dramatically underperforming. "
+        "The largest region-level gaps are in the high-scale CCC regions, which means the absolute miss is driven by scale as much as by execution quality.\n\n"
+        f"Q4 is not a clean recovery signal: {'all four BUs remain behind revenue target' if all_q4_behind else 'the close is mixed by BU'}, "
+        f"with **{q4_lowest.get('business_unit')}** lowest at **{float(q4_lowest.get('q4_achievement_pct') or 0):.1f}%** achievement. "
+        f"The next drill-down should isolate whether the gap is category mix, regional conversion, or channel inventory before committing the FY27 recovery plan."
     )
 
     return Presentation(
@@ -206,18 +216,56 @@ def _deterministic_demo_presentation(interpreted_question: str, results: list[Qu
         layout=[
             PresentationElement(
                 type="bar_chart",
+                analysis_id="fy26_close_2",
+                title="FY26 EBITDA: Actual vs Budget by BU",
+                subtitle="₹ Cr, ordered by EBITDA variance",
+                chart_options={"x_field": "business_unit", "y_field": "actual_ebitda_cr", "tone": "negative"},
+            ),
+            PresentationElement(
+                type="table",
+                analysis_id="fy26_close_2",
+                title="FY26 Full P&L Summary by BU",
+                subtitle="Revenue, gross margin, and EBITDA actuals vs budget",
+                table_options={"max_rows": 4, "highlight_rows": ["SPN", "BulkFert", "CCC"]},
+            ),
+            PresentationElement(
+                type="stacked_bar",
                 analysis_id="fy26_close_1",
-                title="FY26 actual revenue vs plan",
-                subtitle="Quarterly revenue in ₹ Cr with achievement against plan",
+                title="FY26 Revenue Achievement % by BU and Region",
+                subtitle="% of target achieved; every region is below plan",
+                chart_options={"x_field": "business_unit", "y_field": "achievement_pct", "stack_field": "region"},
+            ),
+            PresentationElement(
+                type="table",
+                analysis_id="fy26_close_3",
+                title="Q4 FY26 Close Assessment by BU",
+                subtitle="Revenue and EBITDA vs plan in the closing quarter",
+                table_options={"max_rows": 4, "highlight_rows": ["CCC", "SPN"]},
+            ),
+            PresentationElement(
+                type="line_chart",
+                analysis_id="fy26_close_4" if trend_result else "fy26_close_1",
+                title="FY26 Quarterly Revenue Trajectory",
+                subtitle="Actual revenue by BU across Q1-Q4",
                 chart_options={"x_field": "fiscal_quarter", "y_field": "actual_revenue_cr"},
-            )
+            ),
         ],
         key_observations=[
-            f"FY26 revenue is ₹{actual:,.1f} Cr versus plan of ₹{target:,.1f} Cr.",
-            f"Achievement is {achievement:.1f}%, a ₹{abs(shortfall):,.1f} Cr shortfall.",
-            f"{weakest.get('fiscal_quarter')} is the weakest quarter at {weakest_pct:.1f}% achievement.",
+            f"FY26 revenue is ₹{actual:,.1f} Cr versus plan of ₹{target:,.1f} Cr, a ₹{shortfall:,.1f} Cr gap.",
+            f"{largest_ebitda_miss.get('business_unit')} has the largest EBITDA variance at ₹{float(largest_ebitda_miss.get('ebitda_variance_cr') or 0):,.1f} Cr.",
+            f"Q4 still needs attention: {q4_lowest.get('business_unit')} is lowest on revenue achievement at {float(q4_lowest.get('q4_achievement_pct') or 0):.1f}%.",
+            (
+                f"{bulkfert_row.get('business_unit')} remains loss-making at "
+                f"{float(bulkfert_row.get('actual_ebitda_margin_pct') or 0):.1f}% EBITDA margin."
+                if bulkfert_row
+                else "Loss-making pockets need the next drill-down."
+            ),
         ],
     )
+
+
+def _successful_result(results: list[QueryResult], analysis_id: str) -> QueryResult | None:
+    return next((item for item in results if item.analysis_id == analysis_id and item.success and item.rows), None)
 
 
 def _local_presentation(interpreted_question: str, results: list[QueryResult]) -> Presentation:

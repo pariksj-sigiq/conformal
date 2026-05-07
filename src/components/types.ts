@@ -20,6 +20,10 @@ export type ChartBundle = {
   description?: string;
   spec?: Record<string, unknown>;
   span?: 1 | 2 | 3 | 4;
+  visualType?: string;
+  chartOptions?: Record<string, unknown>;
+  tableOptions?: Record<string, unknown>;
+  stackKeys?: string[];
   generatedAt?: number;
   rows?: Record<string, unknown>[];
 };

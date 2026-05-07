@@ -13,6 +13,10 @@ export type ChartPayload = {
   sql: string;
   spec: TopLevelSpec;
   span: ChartSpan;
+  visualType?: string;
+  chartOptions?: Record<string, unknown>;
+  tableOptions?: Record<string, unknown>;
+  stackKeys?: string[];
   rows?: Record<string, unknown>[];
 };
 

@@ -72,6 +72,10 @@ def _contextual_question(question: str, history: list[Message]) -> str:
 
 
 def interpret(question: str, history: list[Message] | None = None) -> InterpretationResult:
+    deterministic = _deterministic_demo_interpretation(question, history)
+    if deterministic:
+        return deterministic
+
     system = load_prompt("interpreter")
     history = history or []
     user = (
@@ -86,3 +90,22 @@ def interpret(question: str, history: list[Message] | None = None) -> Interpreta
             return _local_interpretation(question, history)
         raise
     return InterpretationResult.model_validate(raw)
+
+
+def _deterministic_demo_interpretation(question: str, history: list[Message] | None = None) -> InterpretationResult | None:
+    cleaned = _contextual_question(" ".join(question.split()).strip(), history or [])
+    lower = cleaned.lower()
+    asks_fy26_close = "fy26" in lower and any(token in lower for token in ("closing", "close", "vs plan", "where are we"))
+    if not asks_fy26_close:
+        return None
+
+    return InterpretationResult(
+        intent_understood=True,
+        interpreted_question=cleaned,
+        implicit_assumptions=[
+            "FY26 closing means full-year FY26 performance against plan, with Q4 close risk called out.",
+            "Money values should be reported in INR crores where applicable.",
+        ],
+        clarifying_question=None,
+        options_for_user=None,
+    )

@@ -37,7 +37,7 @@ type QueryState = {
   tables: string[];
 };
 
-type ChartKind = "area" | "line" | "bar" | "horizontal-bar" | "scatter";
+type ChartKind = "area" | "line" | "bar" | "stacked-bar" | "horizontal-bar" | "scatter";
 
 type ChartModel = {
   kind: ChartKind;
@@ -182,7 +182,12 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
 }
 
 function GeneratedChart({ chart, rows, compact }: { chart: ChartBundle; rows: Record<string, unknown>[]; compact?: boolean }) {
-  const model = useMemo(() => buildChartModel(chart, rows), [chart, rows]);
+  const isTable = chart.visualType === "table";
+  const model = useMemo(() => (isTable ? null : buildChartModel(chart, rows)), [chart, rows, isTable]);
+
+  if (isTable) {
+    return <GeneratedTable chart={chart} rows={rows} />;
+  }
 
   if (!model) {
     return (
@@ -244,6 +249,23 @@ function GeneratedChart({ chart, rows, compact }: { chart: ChartBundle; rows: Re
           <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
           {model.yKeys.map((key, index) => (
             <Bar key={key} dataKey={key} radius={[5, 5, 0, 0]} fill={`var(--color-${cssVarKey(key)})`} opacity={index ? 0.72 : 1} />
+          ))}
+        </BarChart>
+      </ChartContainer>
+    );
+  }
+
+  if (model.kind === "stacked-bar") {
+    return (
+      <ChartContainer config={model.config} className={cn("shadcn-chart aspect-auto w-full", heightClass)}>
+        <BarChart data={model.data} margin={{ left: 12, right: 12, top: 10, bottom: 4 }}>
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis {...axisProps} dataKey={model.xKey} />
+          <YAxis {...axisProps} width={yAxisWidth} tickFormatter={formatAxisTick} domain={domainForStackedSeries(model)} />
+          <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+          <ChartLegend content={<ChartLegendContent />} />
+          {model.yKeys.map((key) => (
+            <Bar key={key} dataKey={key} stackId="a" radius={[4, 4, 0, 0]} fill={`var(--color-${cssVarKey(key)})`} />
           ))}
         </BarChart>
       </ChartContainer>
@@ -312,6 +334,50 @@ function GeneratedChart({ chart, rows, compact }: { chart: ChartBundle; rows: Re
   );
 }
 
+function GeneratedTable({ chart, rows }: { chart: ChartBundle; rows: Record<string, unknown>[] }) {
+  const maxRows = typeof chart.tableOptions?.max_rows === "number" ? chart.tableOptions.max_rows : 12;
+  const highlights = Array.isArray(chart.tableOptions?.highlight_rows) ? chart.tableOptions.highlight_rows.map(String) : [];
+  const visibleRows = rows.slice(0, maxRows);
+  const columns = Object.keys(visibleRows[0] ?? {});
+
+  if (!visibleRows.length) {
+    return (
+      <div className="chart-empty">
+        <strong>No rows returned</strong>
+        <span>The table query ran successfully but returned an empty result set.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="analysis-table-wrap">
+      <table className="analysis-table">
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th key={column}>{labelize(column)}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {visibleRows.map((row, index) => {
+            const highlighted = highlights.some((needle) => Object.values(row).some((value) => String(value).includes(needle)));
+            return (
+              <tr key={`${index}-${Object.values(row).join("-")}`} className={highlighted ? "row-highlight" : undefined}>
+                {columns.map((column) => (
+                  <td key={column} className={isNumericValue(row[column]) ? "num" : undefined}>
+                    {formatTableCell(row[column], column)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function buildChartModel(chart: ChartBundle, sourceRows: Record<string, unknown>[]): ChartModel | null {
   const rows = normalizeRows(sourceRows);
   const columns = Object.keys(rows[0] ?? {});
@@ -347,8 +413,20 @@ function buildSingleSeriesModel(
   textColumns: string[],
   preferredKind: ChartKind,
 ): ChartModel {
-  const xKey = pickXKey(columns, numericColumns, textColumns);
+  const xKey = pickXKey(chart, columns, numericColumns, textColumns);
   const yKey = pickYKey(chart, numericColumns, xKey);
+  const stackField = optionString(chart.chartOptions, "stack_field");
+  if (preferredKind === "stacked-bar" && stackField) {
+    const pivot = pivotRows(rows, xKey, stackField, yKey);
+    return {
+      kind: "stacked-bar",
+      data: pivot.data,
+      config: buildConfig(pivot.series, pivot.labels),
+      xKey,
+      yKeys: pivot.series,
+    };
+  }
+
   const seriesKey = textColumns.find((column) => column !== xKey && uniqueValues(rows, column).length > 1 && uniqueValues(rows, column).length <= 8);
   const shouldPivot = Boolean(seriesKey && preferredKind !== "horizontal-bar" && preferredKind !== "bar");
 
@@ -363,7 +441,10 @@ function buildSingleSeriesModel(
     };
   }
 
-  const yKeys = numericColumns.filter((column) => column !== xKey).slice(0, preferredKind === "bar" ? 3 : 2);
+  const explicitYKey = optionString(chart.chartOptions, "y_field");
+  const yKeys = explicitYKey && numericColumns.includes(explicitYKey)
+    ? [explicitYKey]
+    : numericColumns.filter((column) => column !== xKey).slice(0, preferredKind === "bar" ? 3 : 2);
   const finalYKeys = yKeys.length ? yKeys : [yKey];
   const aliases = finalYKeys.map(cssVarKey);
 
@@ -385,6 +466,10 @@ function inferChartKind(chart: ChartBundle, columns: string[], numericColumns: s
   const markType = typeof mark === "string" ? mark : mark && typeof mark === "object" && "type" in mark ? String(mark.type) : "";
   const hasTime = columns.some((column) => /(^|_)(date|month|week|quarter|period|year)($|_)/i.test(column));
 
+  if (chart.visualType === "stacked_bar") return "stacked-bar";
+  if (chart.visualType === "line_chart") return "line";
+  if (chart.visualType === "scatter") return "scatter";
+  if (chart.visualType === "bar_chart") return "bar";
   if (markType.includes("line")) return "line";
   if (markType.includes("area")) return "area";
   if (markType.includes("point") || markType.includes("circle") || text.includes("scatter") || text.includes("digital engagement")) return "scatter";
@@ -407,13 +492,17 @@ function normalizeRows(rows: Record<string, unknown>[]) {
   );
 }
 
-function pickXKey(columns: string[], numericColumns: string[], textColumns: string[]) {
+function pickXKey(chart: ChartBundle, columns: string[], numericColumns: string[], textColumns: string[]) {
+  const explicit = optionString(chart.chartOptions, "x_field");
+  if (explicit && columns.includes(explicit)) return explicit;
   const preferredText = textColumns.find((column) => /(date|week|quarter|month|period|wave|year|zone|region|dealer|category|name)/i.test(column));
   if (preferredText) return preferredText;
   return textColumns[0] ?? columns.find((column) => !numericColumns.includes(column)) ?? columns[0] ?? "category";
 }
 
 function pickYKey(chart: ChartBundle, numericColumns: string[], xKey: string) {
+  const explicit = optionString(chart.chartOptions, "y_field");
+  if (explicit && numericColumns.includes(explicit)) return explicit;
   const text = chart.title.toLowerCase();
   const preferred = numericColumns.find((column) => {
     const normalized = column.toLowerCase();
@@ -469,6 +558,16 @@ function domainForSeries(model: ChartModel): [number | "auto", number | "auto"] 
   return domainForValues(values);
 }
 
+function domainForStackedSeries(model: ChartModel): [number | "auto", number | "auto"] {
+  const values = model.data.map((row) =>
+    model.yKeys.reduce((sum, key) => {
+      const value = Number(row[key]);
+      return sum + (Number.isFinite(value) ? value : 0);
+    }, 0),
+  );
+  return domainForValues(values);
+}
+
 function domainForKey(model: ChartModel, key: string): [number | "auto", number | "auto"] {
   const values = model.data.map((row) => Number(row[key])).filter(Number.isFinite);
   return domainForValues(values);
@@ -505,6 +604,11 @@ function niceCeiling(value: number) {
 
 function cssVarKey(key: string) {
   return key.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function optionString(options: Record<string, unknown> | undefined, key: string) {
+  const value = options?.[key];
+  return typeof value === "string" ? value : undefined;
 }
 
 function labelize(key: string) {
@@ -548,6 +652,18 @@ function formatAxisTick(value: string | number) {
   if (abs >= 1_000_000) return `${trimNumber(number / 1_000_000)}M`;
   if (abs >= 1_000) return `${trimNumber(number / 1_000)}K`;
   return trimNumber(number);
+}
+
+function formatTableCell(value: unknown, column: string) {
+  if (value == null || value === "") return "—";
+  if (!isNumericValue(value)) return String(value);
+
+  const number = Number(value);
+  if (column.endsWith("_pct") || column.includes("achievement")) return `${trimNumber(number)}%`;
+  if (column.endsWith("_cr") || column.includes("revenue") || column.includes("ebitda") || column.includes("budget") || column.includes("variance") || column.includes("gm")) {
+    return `₹${trimNumber(number)} Cr`;
+  }
+  return number.toLocaleString("en-IN", { maximumFractionDigits: 1 });
 }
 
 function trimNumber(value: number) {

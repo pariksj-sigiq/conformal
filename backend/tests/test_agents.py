@@ -80,6 +80,20 @@ def test_interpreter_contextualizes_period_followup_on_fallback(monkeypatch: pyt
     assert "FY26 year-to-date" in (result.interpreted_question or "")
 
 
+def test_interpreter_accepts_fy26_close_demo_prompt_without_clarifying(monkeypatch: pytest.MonkeyPatch):
+    def should_not_call_llm(*_args, **_kwargs):
+        pytest.fail("FY26 close demo prompt should use deterministic interpretation")
+
+    monkeypatch.setattr(interpreter_agent, "complete_json", should_not_call_llm)
+
+    result = interpret("How is FY26 closing? Where are we vs plan?")
+
+    assert result.intent_understood is True
+    assert result.interpreted_question == "How is FY26 closing? Where are we vs plan?"
+    assert result.clarifying_question is None
+    assert any("full-year FY26" in assumption for assumption in result.implicit_assumptions)
+
+
 def test_planner_falls_back_on_azure_content_filter(monkeypatch: pytest.MonkeyPatch):
     def blocked(*_args, **_kwargs):
         raise RuntimeError("Azure OpenAI 400: content_filter")

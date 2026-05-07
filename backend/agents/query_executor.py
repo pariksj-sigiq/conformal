@@ -202,24 +202,134 @@ def _execute_raw(
 
 
 def _deterministic_sql_for_analysis(analysis: Analysis) -> dict[str, str] | None:
-    if analysis.analysis_id != "fy26_close_1":
-        return None
+    if analysis.analysis_id == "fy26_close_1":
+        return {
+            "sql": """
+                SELECT
+                  category AS business_unit,
+                  region,
+                  SUM(actual_net_value_inr) / 10000000 AS actual_revenue_cr,
+                  SUM(target_net_value_inr) / 10000000 AS target_revenue_cr,
+                  SUM(actual_net_value_inr - target_net_value_inr) / 10000000 AS revenue_variance_cr,
+                  CASE
+                    WHEN SUM(target_net_value_inr) = 0 THEN NULL
+                    ELSE SUM(actual_net_value_inr) / SUM(target_net_value_inr) * 100
+                  END AS achievement_pct
+                FROM fact_targets
+                WHERE fiscal_year = 'FY26'
+                  AND fiscal_quarter != 'Annual'
+                GROUP BY category, region
+                ORDER BY business_unit, region
+                LIMIT 200
+            """,
+            "notable_observations": (
+                "Full-year revenue achievement is tightly clustered around 89-95%; the largest misses are scale-driven in CCC West, CCC South, and CCC North."
+            ),
+        }
 
-    return {
-        "sql": """
+    if analysis.analysis_id == "fy26_close_2":
+        return {
+            "sql": """
+                SELECT
+                  business_unit,
+                  SUM(revenue_inr) / 10000000 AS actual_revenue_cr,
+                  SUM(revenue_budget_inr) / 10000000 AS budget_revenue_cr,
+                  SUM(revenue_variance_inr) / 10000000 AS revenue_variance_cr,
+                  SUM(gross_margin_inr) / 10000000 AS actual_gm_cr,
+                  SUM(ebitda_inr) / 10000000 AS actual_ebitda_cr,
+                  SUM(ebitda_budget_inr) / 10000000 AS budget_ebitda_cr,
+                  SUM(ebitda_variance_inr) / 10000000 AS ebitda_variance_cr,
+                  CASE
+                    WHEN SUM(revenue_inr) = 0 THEN NULL
+                    ELSE SUM(ebitda_inr) / SUM(revenue_inr) * 100
+                  END AS actual_ebitda_margin_pct,
+                  CASE
+                    WHEN SUM(revenue_budget_inr) = 0 THEN NULL
+                    ELSE SUM(ebitda_budget_inr) / SUM(revenue_budget_inr) * 100
+                  END AS budget_ebitda_margin_pct
+                FROM fact_finance_pl
+                WHERE fiscal_year = 'FY26'
+                GROUP BY business_unit
+                ORDER BY ebitda_variance_cr ASC
+                LIMIT 200
+            """,
+            "notable_observations": (
+                "Every BU is behind EBITDA budget; CCC carries the largest absolute EBITDA erosion, while SPN and BulkFert show the clearest margin pressure."
+            ),
+        }
+
+    if analysis.analysis_id == "fy26_close_3":
+        return {
+            "sql": """
+                WITH q4_targets AS (
+                  SELECT
+                    category AS business_unit,
+                    SUM(target_net_value_inr) / 10000000 AS q4_target_revenue_cr,
+                    SUM(actual_net_value_inr) / 10000000 AS q4_actual_revenue_cr,
+                    CASE
+                      WHEN SUM(target_net_value_inr) = 0 THEN NULL
+                      ELSE SUM(actual_net_value_inr) / SUM(target_net_value_inr) * 100
+                    END AS q4_achievement_pct
+                  FROM fact_targets
+                  WHERE fiscal_year = 'FY26'
+                    AND fiscal_quarter = 'Q4'
+                  GROUP BY category
+                ),
+                q4_finance AS (
+                  SELECT
+                    business_unit,
+                    SUM(ebitda_inr) / 10000000 AS q4_actual_ebitda_cr,
+                    SUM(ebitda_budget_inr) / 10000000 AS q4_budget_ebitda_cr,
+                    SUM(ebitda_variance_inr) / 10000000 AS q4_ebitda_variance_cr
+                  FROM fact_finance_pl
+                  WHERE fiscal_year = 'FY26'
+                    AND fiscal_quarter = 'Q4'
+                  GROUP BY business_unit
+                )
+                SELECT
+                  t.business_unit,
+                  t.q4_target_revenue_cr,
+                  t.q4_actual_revenue_cr,
+                  t.q4_achievement_pct,
+                  f.q4_actual_ebitda_cr,
+                  f.q4_budget_ebitda_cr,
+                  f.q4_ebitda_variance_cr
+                FROM q4_targets t
+                LEFT JOIN q4_finance f USING (business_unit)
+                ORDER BY t.q4_achievement_pct ASC
+                LIMIT 200
+            """,
+            "notable_observations": (
+                "Q4 revenue achievement remains below target for all four BUs; CCC has the largest Q4 absolute revenue gap and also misses EBITDA budget."
+            ),
+        }
+
+    if analysis.analysis_id == "fy26_close_4":
+        return {
+            "sql": """
             SELECT
               fiscal_quarter,
+              category AS business_unit,
               SUM(actual_net_value_inr) / 10000000 AS actual_revenue_cr,
-              SUM(target_net_value_inr) / 10000000 AS target_revenue_cr
+              SUM(target_net_value_inr) / 10000000 AS target_revenue_cr,
+              SUM(actual_net_value_inr - target_net_value_inr) / 10000000 AS revenue_variance_cr,
+              CASE
+                WHEN SUM(target_net_value_inr) = 0 THEN NULL
+                ELSE SUM(actual_net_value_inr) / SUM(target_net_value_inr) * 100
+              END AS achievement_pct
             FROM fact_targets
             WHERE fiscal_year = 'FY26'
               AND fiscal_quarter != 'Annual'
-            GROUP BY fiscal_quarter
-            ORDER BY fiscal_quarter
+            GROUP BY fiscal_quarter, category
+            ORDER BY fiscal_quarter, business_unit
             LIMIT 200
         """,
-        "notable_observations": "Deterministic FY26 close query comparing actual revenue with target by quarter.",
-    }
+            "notable_observations": (
+                "Quarterly achievement shows Q2 was the softest quarter for CCC and SPN; Q4 remains below target despite a narrower gap."
+            ),
+        }
+
+    return None
 
 
 def _can_use_local_fallback(error: Exception) -> bool:

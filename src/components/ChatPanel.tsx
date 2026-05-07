@@ -15,6 +15,7 @@ type ChatPanelProps = {
 };
 
 export const starters = [
+  { domain: "Finance", prompt: "How is FY26 closing? Where are we vs plan?" },
   { domain: "Finance", prompt: "Revenue over last 12 months" },
   { domain: "Finance", prompt: "Show me the revenue and EBITDA time series." },
   { domain: "EBITDA", prompt: "Why did Q2 FY26 EBITDA miss budget?" },
@@ -205,6 +206,7 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
                 <div className="message-body">
                   {message.role === "user" ? <p className="user-question">{message.content}</p> : null}
                   {message.trace?.length ? <TraceSummary trace={message.trace} /> : null}
+                  {message.role === "assistant" && message.trace?.length ? <PlanProgress trace={message.trace} /> : null}
                   {message.role === "assistant" ? (
                     <AssistantMarkdown
                       className={cn("answer-copy", !message.content && isSending && "answer-copy-loading")}
@@ -216,14 +218,14 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
             ))}
           </div>
         ) : (
-          <WelcomeState onPickPrompt={setInput} />
+          <WelcomeState onPickPrompt={(prompt) => void submitPrompt(undefined, prompt)} />
         )}
 
         <div className="chat-composer">
           {hasConversation ? (
             <div className="starter-row" aria-label="Suggested follow-up prompts">
               {starters.slice(1, 4).map((starter) => (
-                <button type="button" key={starter.prompt} onClick={() => setInput(starter.prompt)}>
+                <button type="button" key={starter.prompt} onClick={() => void submitPrompt(undefined, starter.prompt)}>
                   {starter.domain}
                 </button>
               ))}
@@ -259,7 +261,7 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
           {activeCharts.length ? (
             <>
               <KpiStrip chart={kpiChart} />
-              {displayCharts.slice(0, 2).map((chart) => (
+              {displayCharts.map((chart) => (
                 <LiveChart key={chart.id} chart={chart} live={live} pinned={pinnedIds.has(chart.id)} onPin={onPinChart} />
               ))}
             </>
@@ -296,6 +298,24 @@ function hasBothAxes(chart: ChartBundle) {
 type MarkdownBlock =
   | { type: "paragraph"; lines: string[] }
   | { type: "list"; ordered: boolean; items: string[] };
+
+type AnalysisPlanItem = {
+  analysis_id: string;
+  purpose: string;
+  type: string;
+};
+
+type AnalysisPlan = {
+  analyses: AnalysisPlanItem[];
+  plan_rationale: string;
+};
+
+type AnalysisProgress = {
+  state: "running" | "complete" | "failed";
+  rowCount?: number;
+  notableObservations?: string;
+  error?: string;
+};
 
 export function AssistantMarkdown({ className, text }: { className?: string; text: string }) {
   const blocks = parseMarkdownBlocks(text);
@@ -401,6 +421,88 @@ function WelcomeState({ onPickPrompt }: { onPickPrompt: (prompt: string) => void
       </div>
     </div>
   );
+}
+
+function PlanProgress({ trace }: { trace: TraceEvent[] }) {
+  const plan = extractPlan(trace);
+  if (!plan?.analyses.length) return null;
+
+  const progress = extractAnalysisProgress(trace);
+
+  return (
+    <div className="plan-display" aria-label="Analysis plan">
+      <div className="plan-header">
+        <strong>
+          Plan ({plan.analyses.length} {plan.analyses.length === 1 ? "analysis" : "analyses"})
+        </strong>
+        {plan.plan_rationale ? <span className="muted"> - {plan.plan_rationale}</span> : null}
+      </div>
+      <ul className="plan-list">
+        {plan.analyses.map((analysis) => {
+          const status = progress.get(analysis.analysis_id) ?? { state: "running" as const };
+          return (
+            <li key={analysis.analysis_id} className={cn("plan-item", `plan-${status.state}`)}>
+              <span className="plan-icon">{status.state === "complete" ? "✓" : status.state === "failed" ? "!" : ""}</span>
+              <span className="plan-id">{analysis.analysis_id}</span>
+              <span className="plan-type">{analysis.type}</span>
+              <span className="plan-purpose">{analysis.purpose}</span>
+              {status.notableObservations && status.state === "complete" ? <div className="plan-obs">{status.notableObservations}</div> : null}
+              {status.error ? <div className="plan-err">SQL failed: {status.error}</div> : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function extractPlan(trace: TraceEvent[]): AnalysisPlan | null {
+  const planTrace = trace.find((item) => item.id === "eceo-plan-end" || item.label.toLowerCase().includes("analysisplanner created"));
+  const payload = asPlainRecord(planTrace?.payload);
+  const analyses = Array.isArray(payload.analyses)
+    ? payload.analyses.flatMap((item): AnalysisPlanItem[] => {
+        const record = asPlainRecord(item);
+        const analysisId = typeof record.analysis_id === "string" ? record.analysis_id : "";
+        const purpose = typeof record.purpose === "string" ? record.purpose : "";
+        const type = typeof record.type === "string" ? record.type : "analysis";
+        return analysisId && purpose ? [{ analysis_id: analysisId, purpose, type }] : [];
+      })
+    : [];
+
+  if (!analyses.length) return null;
+  return {
+    analyses,
+    plan_rationale: typeof payload.plan_rationale === "string" ? payload.plan_rationale : "",
+  };
+}
+
+function extractAnalysisProgress(trace: TraceEvent[]) {
+  const progress = new Map<string, AnalysisProgress>();
+
+  for (const item of trace) {
+    const payload = asPlainRecord(item.payload);
+    const analysisId = typeof payload.analysis_id === "string" ? payload.analysis_id : item.id.match(/eceo-analysis-(.+?)-(?:start|end)$/)?.[1];
+    if (!analysisId) continue;
+
+    if (item.status === "running") {
+      progress.set(analysisId, { state: "running" });
+      continue;
+    }
+
+    const success = payload.success !== false && item.status !== "error";
+    progress.set(analysisId, {
+      state: success ? "complete" : "failed",
+      rowCount: typeof payload.row_count === "number" ? payload.row_count : undefined,
+      notableObservations: typeof payload.notable_observations === "string" ? payload.notable_observations : undefined,
+      error: typeof payload.error === "string" ? payload.error : undefined,
+    });
+  }
+
+  return progress;
+}
+
+function asPlainRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
 function TraceSummary({ trace }: { trace: TraceEvent[] }) {
@@ -739,6 +841,10 @@ export function applyChatEvent(message: ChatMessage, eventData: Record<string, u
       description: rawChart.description ?? (rawChart as { narrative?: string }).narrative,
       spec: rawChart.spec,
       span: rawChart.span,
+      visualType: typeof rawChart.visualType === "string" ? rawChart.visualType : undefined,
+      chartOptions: rawChart.chartOptions && typeof rawChart.chartOptions === "object" ? rawChart.chartOptions : undefined,
+      tableOptions: rawChart.tableOptions && typeof rawChart.tableOptions === "object" ? rawChart.tableOptions : undefined,
+      stackKeys: Array.isArray(rawChart.stackKeys) ? rawChart.stackKeys.map(String) : undefined,
       rows: Array.isArray(rawChart.rows) ? rawChart.rows : undefined,
       generatedAt: Date.now(),
     };

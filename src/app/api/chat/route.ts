@@ -202,17 +202,25 @@ function chartEventsFromPresentation(payload: Record<string, unknown>): ChartPay
       const subtitle = spec.subtitle ?? element.subtitle;
       const xKey = typeof spec.x_key === "string" ? spec.x_key : undefined;
       const yKey = typeof spec.y_key === "string" ? spec.y_key : undefined;
+      const chartOptions = asRecord(element.chart_options);
+      const tableOptions = asRecord(element.table_options);
+      const stackKeys = Array.isArray(spec.stack_keys) ? spec.stack_keys.map(String) : undefined;
       return [{
         id: `eceo-${String(element.analysis_id ?? index)}-${Date.now()}-${index}`,
         title,
         narrative: typeof subtitle === "string" ? subtitle : "ECEO backend analysis result.",
         sql: `-- ECEO backend result for ${String(element.analysis_id ?? `analysis ${index + 1}`)}; SQL executed in Python sidecar.`,
+        visualType: type,
+        chartOptions,
+        tableOptions,
+        stackKeys,
         spec: {
           data: { values: rows },
           mark: markForChartType(type),
           encoding: {
             x: xKey ? { field: xKey } : undefined,
             y: yKey ? { field: yKey } : undefined,
+            color: chartOptions.stack_field ? { field: String(chartOptions.stack_field) } : undefined,
           },
         },
         span: spanForChartType(type),
@@ -230,7 +238,7 @@ function markForChartType(type: string) {
 
 function spanForChartType(type: string): ChartPayload["span"] {
   if (type === "kpi_card") return 1;
-  if (type === "table") return 3;
+  if (type === "table") return 2;
   return 2;
 }
 

@@ -48,19 +48,72 @@ def _deterministic_demo_plan(interpreted_question: str) -> Plan | None:
         analyses=[
             Analysis(
                 analysis_id="fy26_close_1",
-                purpose="Compare FY26 actual revenue against plan by quarter and for the full year",
+                purpose="Revenue actuals vs targets by BU and region for full FY26, showing achievement percentage and absolute variance",
                 type="comparison",
                 tables_needed=["fact_targets"],
                 filters={"fiscal_year": "FY26"},
                 measures=[
                     "SUM(actual_net_value_inr) / 10000000 AS actual_revenue_cr",
                     "SUM(target_net_value_inr) / 10000000 AS target_revenue_cr",
+                    "SUM(actual_net_value_inr - target_net_value_inr) / 10000000 AS revenue_variance_cr",
+                    "SUM(actual_net_value_inr) / NULLIF(SUM(target_net_value_inr), 0) * 100 AS achievement_pct",
                 ],
-                dimensions=["fiscal_quarter"],
-                expected_output_shape="FY26 quarterly rows showing actual revenue and planned revenue in crores",
-            )
+                dimensions=["category", "region"],
+                expected_output_shape="BU-region rows with actual revenue, target revenue, variance, and achievement percentage",
+            ),
+            Analysis(
+                analysis_id="fy26_close_2",
+                purpose="EBITDA actuals vs budget by BU for full FY26, with revenue and gross margin context to understand drivers of any shortfall or beat",
+                type="comparison",
+                tables_needed=["fact_finance_pl"],
+                filters={"fiscal_year": "FY26"},
+                measures=[
+                    "SUM(revenue_inr) / 10000000 AS actual_revenue_cr",
+                    "SUM(revenue_budget_inr) / 10000000 AS budget_revenue_cr",
+                    "SUM(revenue_variance_inr) / 10000000 AS revenue_variance_cr",
+                    "SUM(gross_margin_inr) / 10000000 AS actual_gm_cr",
+                    "SUM(ebitda_inr) / 10000000 AS actual_ebitda_cr",
+                    "SUM(ebitda_budget_inr) / 10000000 AS budget_ebitda_cr",
+                    "SUM(ebitda_variance_inr) / 10000000 AS ebitda_variance_cr",
+                ],
+                dimensions=["business_unit"],
+                expected_output_shape="BU rows with revenue, gross margin, EBITDA actuals, budgets, variance, and margin percentages",
+            ),
+            Analysis(
+                analysis_id="fy26_close_3",
+                purpose="Q4 FY26 close assessment by BU, comparing revenue vs target and EBITDA vs budget to identify which BUs need a final push",
+                type="comparison",
+                tables_needed=["fact_targets", "fact_finance_pl"],
+                filters={"fiscal_year": "FY26", "fiscal_quarter": "Q4"},
+                measures=[
+                    "SUM(target_net_value_inr) / 10000000 AS q4_target_revenue_cr",
+                    "SUM(actual_net_value_inr) / 10000000 AS q4_actual_revenue_cr",
+                    "SUM(actual_net_value_inr) / NULLIF(SUM(target_net_value_inr), 0) * 100 AS q4_achievement_pct",
+                    "SUM(ebitda_inr) / 10000000 AS q4_actual_ebitda_cr",
+                    "SUM(ebitda_budget_inr) / 10000000 AS q4_budget_ebitda_cr",
+                ],
+                dimensions=["business_unit"],
+                expected_output_shape="BU rows for Q4 with target revenue, actual revenue, achievement percentage, actual EBITDA, budget EBITDA, and EBITDA variance",
+            ),
+            Analysis(
+                analysis_id="fy26_close_4",
+                purpose="Quarterly revenue trend across all four quarters of FY26 by BU to show whether performance improved or deteriorated through the year",
+                type="trend",
+                tables_needed=["fact_targets"],
+                filters={"fiscal_year": "FY26"},
+                measures=[
+                    "SUM(actual_net_value_inr) / 10000000 AS actual_revenue_cr",
+                    "SUM(target_net_value_inr) / 10000000 AS target_revenue_cr",
+                    "SUM(actual_net_value_inr) / NULLIF(SUM(target_net_value_inr), 0) * 100 AS achievement_pct",
+                ],
+                dimensions=["fiscal_quarter", "category"],
+                expected_output_shape="Quarter-BU rows with actual revenue, target revenue, variance, and achievement percentage",
+            ),
         ],
-        plan_rationale="Used the deterministic FY26 close demo plan so the main demo question always returns a plan-backed analysis.",
+        plan_rationale=(
+            "A comprehensive FY26 performance vs plan view needs four complementary lenses: "
+            "revenue achievement by BU and region, full P&L context, Q4 close risk, and quarterly trajectory."
+        ),
     )
 
 

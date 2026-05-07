@@ -67,6 +67,8 @@ def run_pipeline(
                 "analysis_id": result.analysis_id,
                 "success": result.success,
                 "row_count": result.row_count,
+                "sql": result.sql,
+                "columns": result.columns,
                 "notable_observations": result.notable_observations,
                 "error": result.error,
             },
@@ -90,6 +92,16 @@ def run_pipeline(
         {
             **state.presentation.model_dump(),
             "chart_specs": [s.model_dump() for s in chart_specs],
+            "query_evidence": [
+                {
+                    "analysis_id": result.analysis_id,
+                    "sql": result.sql,
+                    "row_count": result.row_count,
+                    "columns": result.columns,
+                    "notable_observations": result.notable_observations,
+                }
+                for result in state.query_results
+            ],
         },
     )
     fire("done", {})

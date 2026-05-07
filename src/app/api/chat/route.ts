@@ -158,7 +158,10 @@ function* mapEceoEvent(eventName: string, data: unknown): Generator<ChatEvent> {
       success
         ? `QueryExecutor completed ${String(payload.analysis_id ?? "analysis")} with ${rowCount} rows`
         : `QueryExecutor failed ${String(payload.analysis_id ?? "analysis")}: ${String(payload.error ?? "unknown error")}`,
-      { payload },
+      {
+        payload,
+        ...(typeof payload.sql === "string" && payload.sql.trim() ? { sql: payload.sql } : {}),
+      },
     );
     return;
   }
@@ -190,6 +193,11 @@ function* mapEceoEvent(eventName: string, data: unknown): Generator<ChatEvent> {
 function chartEventsFromPresentation(payload: Record<string, unknown>): ChartPayload[] {
   const specs = Array.isArray(payload.chart_specs) ? payload.chart_specs.map(asRecord) : [];
   const layout = Array.isArray(payload.layout) ? payload.layout.map(asRecord) : [];
+  const evidenceById = new Map<string, Record<string, unknown>>();
+  for (const item of Array.isArray(payload.query_evidence) ? payload.query_evidence.map(asRecord) : []) {
+    const analysisId = String(item.analysis_id ?? "");
+    if (analysisId) evidenceById.set(analysisId, item);
+  }
 
   return specs
     .flatMap((spec, index) => {
@@ -202,14 +210,19 @@ function chartEventsFromPresentation(payload: Record<string, unknown>): ChartPay
       const subtitle = spec.subtitle ?? element.subtitle;
       const xKey = typeof spec.x_key === "string" ? spec.x_key : undefined;
       const yKey = typeof spec.y_key === "string" ? spec.y_key : undefined;
+      const analysisId = String(element.analysis_id ?? `analysis ${index + 1}`);
+      const evidence = evidenceById.get(analysisId);
+      const sql = typeof evidence?.sql === "string" && evidence.sql.trim()
+        ? evidence.sql
+        : `-- ECEO backend result for ${analysisId}; SQL executed in Python sidecar.`;
       const chartOptions = asRecord(element.chart_options);
       const tableOptions = asRecord(element.table_options);
       const stackKeys = Array.isArray(spec.stack_keys) ? spec.stack_keys.map(String) : undefined;
       return [{
-        id: `eceo-${String(element.analysis_id ?? index)}-${Date.now()}-${index}`,
+        id: `eceo-${analysisId}-${Date.now()}-${index}`,
         title,
         narrative: typeof subtitle === "string" ? subtitle : "ECEO backend analysis result.",
-        sql: `-- ECEO backend result for ${String(element.analysis_id ?? `analysis ${index + 1}`)}; SQL executed in Python sidecar.`,
+        sql,
         visualType: type,
         chartOptions,
         tableOptions,

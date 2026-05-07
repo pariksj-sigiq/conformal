@@ -79,6 +79,30 @@ DEMO_CONTRACTS = [
         "min_analyses": 3,
         "min_visuals": 3,
     },
+    {
+        "id": "question_bank_bu_region_gap",
+        "question": "Where are we vs plan by BU and region, and which area is causing the FY26 gap?",
+        "visual_types": {"bar_chart", "stacked_bar", "table"},
+        "must_mention": ["FY26", "plan"],
+        "min_analyses": 4,
+        "min_visuals": 4,
+    },
+    {
+        "id": "question_bank_sell_through_risk",
+        "question": "Show distributor risk: buying less, paying late, weak sell-through, and aging inventory.",
+        "visual_types": {"bar_chart", "table"},
+        "must_mention": ["distributor", "risk"],
+        "min_analyses": 3,
+        "min_visuals": 3,
+    },
+    {
+        "id": "question_bank_next_moves",
+        "question": "For the FY26 close, where are we vs plan and which BU or region needs the next operating-review action?",
+        "visual_types": {"bar_chart", "stacked_bar", "table"},
+        "must_mention": ["FY26", "plan", "Q4"],
+        "min_analyses": 4,
+        "min_visuals": 4,
+    },
 ]
 
 
@@ -110,6 +134,7 @@ def test_demo_question_has_answer_and_usable_visual(case, db):
 
     successful_results = [result for result in state.query_results if result.success and result.rows]
     assert successful_results, "no executed analysis returned data"
+    assert all(result.sql.strip() for result in successful_results)
 
     assert state.presentation is not None
     assert state.presentation.narrative.strip()

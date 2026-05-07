@@ -6,7 +6,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { DuckDBStore } from "@/lib/duckdb-store";
-import { applyChatEvent, AssistantMarkdown, ChatPanel, consumeNdjson, processingInsightFromTrace, starters, useProcessingStatus } from "./ChatPanel";
+import { applyChatEvent, AssistantMarkdown, buildPreparedTrustResponse, ChatPanel, consumeNdjson, processingInsightFromTrace, starters, useProcessingStatus } from "./ChatPanel";
 import { LiveChart } from "./LiveChart";
 import type { ChartBundle, ChatMessage } from "./types";
 
@@ -15,6 +15,7 @@ const PINNED_CHARTS_KEY = "project-leap-pinned-charts";
 export function CockpitShell() {
   const [live, setLive] = useState(false);
   const [pinnedCharts, setPinnedCharts] = usePinnedCharts();
+  const [workspaceActive, setWorkspaceActive] = useState(false);
 
   useEffect(() => {
     if (!live) return;
@@ -49,7 +50,7 @@ export function CockpitShell() {
   };
 
   return (
-    <main className="app-shell">
+    <main className={cn("app-shell", workspaceActive && "app-shell-sidebar-collapsed")}>
       <MobileShell live={live} pinnedIds={pinnedIds} onPinChart={togglePin} />
 
       <aside className="sfs-sidebar">
@@ -62,13 +63,13 @@ export function CockpitShell() {
         </div>
 
         <nav className="sidebar-nav" aria-label="Primary">
-          <a href="#" className="active">
+          <a href="#" className="active" title="Chat">
             <MessageSquare size={17} />
-            Chat
+            <span>Chat</span>
           </a>
-          <Link href="/dashboard">
+          <Link href="/dashboard" title="Dashboard">
             <BarChart3 size={17} />
-            Dashboard
+            <span>Dashboard</span>
           </Link>
         </nav>
 
@@ -115,7 +116,7 @@ export function CockpitShell() {
           </div>
         </header>
 
-        <ChatPanel live={live} pinnedIds={pinnedIds} onPinChart={togglePin} />
+        <ChatPanel live={live} pinnedIds={pinnedIds} onPinChart={togglePin} onWorkspaceActiveChange={setWorkspaceActive} />
       </div>
     </main>
   );
@@ -136,6 +137,7 @@ function MobileShell({ live, pinnedIds, onPinChart }: { live: boolean; pinnedIds
     if (!prompt || isSending) return;
 
     setActiveTab("chat");
+    const preparedResponse = buildPreparedTrustResponse(prompt, messages);
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
@@ -147,7 +149,7 @@ function MobileShell({ live, pinnedIds, onPinChart }: { live: boolean; pinnedIds
       id: assistantId,
       role: "assistant",
       content: "",
-      trace: [],
+      trace: preparedResponse?.trace.map((item) => ({ ...item, status: "running" })) ?? [],
       charts: [],
       createdAt: Date.now(),
     };
@@ -155,6 +157,24 @@ function MobileShell({ live, pinnedIds, onPinChart }: { live: boolean; pinnedIds
     setMessages((current) => [...current, userMessage, assistantMessage]);
     setMobileInput("");
     setIsSending(true);
+
+    if (preparedResponse) {
+      window.setTimeout(() => {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === assistantId
+              ? {
+                  ...message,
+                  content: preparedResponse.content,
+                  trace: preparedResponse.trace,
+                }
+              : message,
+          ),
+        );
+        setIsSending(false);
+      }, 680);
+      return;
+    }
 
     try {
       const response = await fetch("/api/chat", {
@@ -254,11 +274,11 @@ function MobileHome({ onAsk }: { onAsk: (prompt: string) => void }) {
         </article>
       </section>
 
-      <section className="mobile-home-list" aria-label="Pinned views">
-        <h2>Pinned views</h2>
+      <section className="mobile-home-list" aria-label="Demo questions">
+        <h2>Demo questions</h2>
         {starters.slice(0, 3).map((starter) => (
           <button type="button" key={starter.prompt} onClick={() => onAsk(starter.prompt)}>
-            <strong>{starter.domain}</strong>
+            <strong>{starter.label}</strong>
             <span>{starter.prompt}</span>
           </button>
         ))}
@@ -288,11 +308,7 @@ function MobileChat({
   const chartCount = lastAssistant?.charts?.length ?? 0;
   const processingStatus = useProcessingStatus(isSending);
   const backendStatus = processingInsightFromTrace(trace, processingStatus);
-  const duration = trace.reduce((total, item) => {
-    if (typeof item.durationMs === "number") return total + item.durationMs;
-    const match = item.detail?.match(/(\d+)ms/);
-    return total + (match ? Number(match[1]) : 0);
-  }, 0);
+  const completedSteps = trace.filter((item) => item.type !== "tool_start" && !item.id.startsWith("sql-")).length;
 
   return (
     <div className="mobile-chat-view">
@@ -303,7 +319,7 @@ function MobileChat({
           <span aria-hidden="true" />
           <span aria-hidden="true" />
           <span aria-hidden="true" />
-          <strong>{trace.length} tool calls · {duration || 182}ms</strong>
+          <strong>{isSending ? "Building analysis artifacts" : `Analysis artifacts ready · ${completedSteps || trace.length} steps`}</strong>
         </div>
       ) : isSending ? (
         <div className="mobile-trace" aria-live="polite">
@@ -325,7 +341,7 @@ function MobileChat({
       <div className="mobile-followups" aria-label="Follow up prompts">
         {starters.slice(1, 5).map((starter) => (
           <button type="button" key={starter.prompt} onClick={() => onSubmit(undefined, starter.prompt)} disabled={isSending}>
-            {starter.domain}
+            {starter.label}
           </button>
         ))}
       </div>
@@ -346,7 +362,8 @@ function MobileStarterPrompts({ onPick }: { onPick: (prompt: string) => void }) 
       {starters.slice(0, 4).map((starter) => (
         <button type="button" key={starter.prompt} onClick={() => onPick(starter.prompt)}>
           <span>{starter.domain}</span>
-          <strong>{starter.prompt}</strong>
+          <strong>{starter.label}</strong>
+          <em>{starter.prompt}</em>
         </button>
       ))}
     </div>

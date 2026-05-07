@@ -1,7 +1,7 @@
 "use client";
 
 import { CirclePlus, Loader2, Send } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { PromptInput, PromptInputActions, PromptInputTextarea } from "@/components/ui/prompt-input";
@@ -12,18 +12,131 @@ type ChatPanelProps = {
   live: boolean;
   pinnedIds: Set<string>;
   onPinChart: (chart: ChartBundle) => void;
+  onWorkspaceActiveChange?: (active: boolean) => void;
 };
 
-export const starters = [
-  { domain: "Finance", prompt: "How is FY26 closing? Where are we vs plan?" },
-  { domain: "Finance", prompt: "Revenue over last 12 months" },
-  { domain: "Finance", prompt: "Show me the revenue and EBITDA time series." },
-  { domain: "EBITDA", prompt: "Why did Q2 FY26 EBITDA miss budget?" },
-  { domain: "Procurement", prompt: "Show me procurement savings vs target by category. Time period: FY26 year-to-date" },
-  { domain: "Distributor Risk", prompt: "Show me distributors who are buying less, paying late, and selling slow" },
-  { domain: "Field Force", prompt: "How is the field force tracking this quarter?" },
-  { domain: "Regulatory", prompt: "What's in our regulatory pipeline?" },
+export type StarterPrompt = {
+  domain: string;
+  label: string;
+  prompt: string;
+  detail: string;
+  anchor?: string;
+  group: "business" | "trust";
+  responseKind?: "source" | "assumptions" | "chart-choice" | "limits";
+};
+
+export const businessStarters: StarterPrompt[] = [
+  {
+    domain: "Finance",
+    label: "FY26 vs plan",
+    prompt: "How is FY26 closing? Where are we vs plan?",
+    detail: "KPI strip for revenue, plan gap, achievement, and FY28 ambition context.",
+    anchor: "₹1,553.8 Cr vs ₹1,724.5 Cr plan",
+    group: "business",
+  },
+  {
+    domain: "EBITDA",
+    label: "EBITDA bridge",
+    prompt: "Why did Q2 FY26 EBITDA miss budget?",
+    detail: "Variance bridge across revenue, COGS, opex, and BU contribution.",
+    anchor: "Q2: ₹16.5 Cr vs ₹52.3 Cr budget",
+    group: "business",
+  },
+  {
+    domain: "Gap Drivers",
+    label: "BU / region gap",
+    prompt: "Where are we vs plan by BU and region, and which area is causing the FY26 gap?",
+    detail: "Contribution-to-miss view, not just a performance ranking.",
+    anchor: "CCC EBITDA variance about -₹33.2 Cr",
+    group: "business",
+  },
+  {
+    domain: "Distributor Risk",
+    label: "Commercial risk",
+    prompt: "Show me distributors who are buying less, paying late, and selling slow",
+    detail: "Ranked risk table with revenue decline, DSO, sell-through, and inventory age.",
+    anchor: "Defines buying less, paying late, selling slow",
+    group: "business",
+  },
+  {
+    domain: "Procurement",
+    label: "Savings lever",
+    prompt: "Are we paying above market on any raw material?",
+    detail: "Premium vs market, supplier drilldown, and material action table.",
+    anchor: "Glyphosate Technical premium near 9.3%",
+    group: "business",
+  },
+  {
+    domain: "Regulatory",
+    label: "Pipeline watch",
+    prompt: "What's in our regulatory pipeline?",
+    detail: "Country-status split, top molecule table, and expected Y1 uplift.",
+    anchor: "Filed + under review pipeline about ₹388 Cr",
+    group: "business",
+  },
+  {
+    domain: "Field Force",
+    label: "Productivity",
+    prompt: "How is the field force tracking this quarter?",
+    detail: "Visit volume, order conversion, region variance, and MGO leaderboard.",
+    anchor: "Conversion quality over raw activity",
+    group: "business",
+  },
+  {
+    domain: "Channel",
+    label: "Sell-through",
+    prompt: "Show distributor risk: buying less, paying late, weak sell-through, and aging inventory.",
+    detail: "Distributor risk view using buying decline, DSO, sell-through, and inventory age.",
+    anchor: "Weak sell-through and inventory age",
+    group: "business",
+  },
+  {
+    domain: "Actions",
+    label: "Next moves",
+    prompt: "For the FY26 close, where are we vs plan and which BU or region needs the next operating-review action?",
+    detail: "Turns the FY26 close view into the next operating-review focus area.",
+    anchor: "Next action from BU / region evidence",
+    group: "business",
+  },
 ];
+
+export const trustStarters: StarterPrompt[] = [
+  {
+    domain: "Trust",
+    label: "Source",
+    prompt: "For the current answer, where did the headline number come from? Show source tables, row counts, SQL, and export options.",
+    detail: "Source tables, row counts, SQL, and copy CSV/SQL affordances.",
+    group: "trust",
+    responseKind: "source",
+  },
+  {
+    domain: "Trust",
+    label: "Assumptions",
+    prompt: "For the current answer, what assumptions did the agent make? Include fiscal-year mapping, plan definition, and metric definitions if relevant.",
+    detail: "Interpreter assumptions made explicit before leadership asks.",
+    group: "trust",
+    responseKind: "assumptions",
+  },
+  {
+    domain: "Trust",
+    label: "Chart choice",
+    prompt: "For the current answer, why did the agent choose this chart type instead of another view?",
+    detail: "Chart rationale tied to the question and the shape of the data.",
+    group: "trust",
+    responseKind: "chart-choice",
+  },
+  {
+    domain: "Limits",
+    label: "Limits",
+    prompt: "What can this demo not answer yet? Be clear about static workbook scope, live SAP or Ariba refresh, and synthetic customer data.",
+    detail: "Graceful limitation state for product credibility.",
+    group: "trust",
+    responseKind: "limits",
+  },
+];
+
+export const starters = [...businessStarters, ...trustStarters];
+const followUpStarters = [businessStarters[2], businessStarters[4], businessStarters[5], ...trustStarters];
 
 const processingStatuses = [
   "Thinking through the question...",
@@ -108,10 +221,179 @@ function tableFromLabel(label: string) {
   return label.match(/\b(?:from|for|selected|against)\s+([a-zA-Z0-9_.-]+)/i)?.[1];
 }
 
-export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
+type PreparedTrustResponse = {
+  content: string;
+  trace: TraceEvent[];
+};
+
+export function buildPreparedTrustResponse(prompt: string, history: ChatMessage[]): PreparedTrustResponse | null {
+  const kind = trustKindForPrompt(prompt);
+  if (!kind) return null;
+
+  const currentAnswer = [...history]
+    .reverse()
+    .find((message) => message.role === "assistant" && (message.content.trim() || message.trace?.length || message.charts?.length));
+
+  const trace = preparedTrustTrace(kind);
+  if (!currentAnswer) {
+    return {
+      trace,
+      content: "Run one of the business questions first, then this trust probe will explain the source trail, assumptions, chart choice, or demo limits for that answer.",
+    };
+  }
+
+  if (kind === "source") return { trace, content: sourceTrailForAnswer(currentAnswer) };
+  if (kind === "assumptions") return { trace, content: assumptionsForAnswer(currentAnswer) };
+  if (kind === "chart-choice") return { trace, content: chartRationaleForAnswer(currentAnswer) };
+  return { trace, content: limitsForDemo() };
+}
+
+function trustKindForPrompt(prompt: string): StarterPrompt["responseKind"] | null {
+  const configured = trustStarters.find((starter) => starter.prompt === prompt)?.responseKind;
+  if (configured) return configured;
+
+  const lower = prompt.toLowerCase();
+  if (lower.includes("where did") || lower.includes("source") || lower.includes("sql") || lower.includes("row count")) return "source";
+  if (lower.includes("assumption") || lower.includes("fiscal-year") || lower.includes("fiscal year")) return "assumptions";
+  if (lower.includes("chart") && (lower.includes("why") || lower.includes("choose") || lower.includes("type"))) return "chart-choice";
+  if (lower.includes("can this demo not answer") || lower.includes("limits") || lower.includes("not answer yet")) return "limits";
+  return null;
+}
+
+function preparedTrustTrace(kind: NonNullable<StarterPrompt["responseKind"]>): TraceEvent[] {
+  const labelByKind = {
+    source: "Source trail assembled from current answer artifacts",
+    assumptions: "Interpreter assumptions extracted from current answer artifacts",
+    "chart-choice": "Chart rationale prepared from rendered evidence",
+    limits: "Demo limits prepared from product scope",
+  } satisfies Record<NonNullable<StarterPrompt["responseKind"]>, string>;
+
+  return [{
+    id: `trust-${kind}-${Date.now()}`,
+    type: "artifact_review",
+    tool: "render_chart",
+    label: labelByKind[kind],
+    status: "complete",
+    detail: "Prepared locally from the current answer instead of re-running the business analysis.",
+    timestamp: Date.now(),
+  }];
+}
+
+function sourceTrailForAnswer(message: ChatMessage) {
+  const charts = message.charts ?? [];
+  const allTables = unique(charts.flatMap((chart) => tablesFromExecutedSql(chart.sql)));
+  const traceEvidence = (message.trace ?? []).filter((item) => item.id.includes("eceo-analysis-") && item.status === "complete");
+  const chartLines = charts.slice(0, 6).map((chart, index) => {
+    const rowCount = chart.rows?.length ?? rowCountForAnalysis(message.trace, chart.id) ?? "live";
+    const tables = tablesFromExecutedSql(chart.sql);
+    return `${index + 1}. **${chart.title}**: ${rowCount} rows${tables.length ? ` from ${tables.join(", ")}` : ""}.`;
+  });
+
+  return [
+    "Here is the source trail for the current answer.",
+    "",
+    `**Evidence artifacts:** ${charts.length || traceEvidence.length} generated ${charts.length === 1 ? "view" : "views"} attached to the answer.`,
+    allTables.length ? `**Source tables:** ${allTables.join(", ")}.` : "**Source tables:** available in the analysis trace; chart SQL is attached when the backend exposes it.",
+    chartLines.length ? chartLines.join("\n") : "- The answer has trace evidence but no chart/table artifact to export yet.",
+    "",
+    "**SQL and export:** every chart card has Copy SQL and Copy CSV buttons in the chart header. For backend-sidecar views, the SQL is now carried with the chart artifact when available; CSV export uses the exact rows rendered on screen.",
+  ].join("\n");
+}
+
+function assumptionsForAnswer(message: ChatMessage) {
+  const assumptions = unique([
+    ...extractInterpreterAssumptions(message.trace),
+    "Money values are reported in INR crores where applicable.",
+  ]);
+
+  return [
+    "These are the assumptions behind the current answer.",
+    "",
+    ...assumptions.map((assumption) => `- ${assumption}`),
+    "",
+    "If leadership challenges a number, the next step is to open the source trail and inspect the source table, row count, and SQL behind the specific chart.",
+  ].join("\n");
+}
+
+function chartRationaleForAnswer(message: ChatMessage) {
+  const charts = message.charts ?? [];
+  if (!charts.length) {
+    return "The current answer is narrative-only, so there is no rendered chart choice to explain. Run a business card that returns visuals, then this probe will explain why each visual was selected.";
+  }
+
+  return [
+    "The chart choices follow the shape of the evidence, not decoration.",
+    "",
+    ...charts.slice(0, 6).map((chart) => `- **${chart.title}** uses ${friendlyChartKind(chart)} because ${chartReason(chart)}.`),
+    "",
+    "The rule of thumb is: KPI for one headline number, line for time, bar for ranked comparisons, stacked bar for mix, scatter for risk quadrants, and table when the output is wide or action-oriented.",
+  ].join("\n");
+}
+
+function limitsForDemo() {
+  return [
+    "Clear limits for this demo:",
+    "",
+    "- It answers from the loaded SFS demo workbook and deterministic demo backend, not live transactional systems.",
+    "- SAP, Ariba, CRM, Growth Book, and regulatory-system refreshes are not live unless those connectors are explicitly wired.",
+    "- Customer and distributor data in this environment should be treated as synthetic/static demo data.",
+    "- It is an operating-analysis cockpit, not an approval, write-back, or financial close system.",
+    "- Any leadership decision should still use the exported SQL/CSV trail for validation before action.",
+  ].join("\n");
+}
+
+function extractInterpreterAssumptions(trace: TraceEvent[] | undefined) {
+  const interpreterTrace = trace?.find((item) => item.id === "eceo-interpreter-end");
+  const payload = asPlainRecord(interpreterTrace?.payload);
+  const assumptions = payload.implicit_assumptions;
+  return Array.isArray(assumptions) ? assumptions.map(String).filter(Boolean) : [];
+}
+
+function rowCountForAnalysis(trace: TraceEvent[] | undefined, chartId: string) {
+  const analysisId = chartId.match(/eceo-(.+?)-\d{10,}/)?.[1];
+  if (!analysisId) return undefined;
+  const item = trace?.find((traceItem) => traceItem.id === `eceo-analysis-${analysisId}-end`);
+  const payload = asPlainRecord(item?.payload);
+  return typeof payload.row_count === "number" ? payload.row_count : undefined;
+}
+
+function tablesFromExecutedSql(sql: string | undefined) {
+  if (!sql) return [];
+  return Array.from(sql.matchAll(/\b(?:from|join)\s+["`[]?([a-zA-Z0-9_.-]+)/gi), (match) => match[1]);
+}
+
+function friendlyChartKind(chart: ChartBundle) {
+  const type = chart.visualType ?? String(chart.spec?.mark ?? "chart");
+  if (type === "line_chart" || type === "line") return "a line chart";
+  if (type === "stacked_bar") return "a stacked bar chart";
+  if (type === "bar_chart" || type === "bar") return "a bar chart";
+  if (type === "scatter") return "a scatter plot";
+  if (type === "table") return "a table";
+  return "a chart";
+}
+
+function chartReason(chart: ChartBundle) {
+  const type = chart.visualType ?? String(chart.spec?.mark ?? "");
+  const rows = chart.rows ?? [];
+  const columns = Object.keys(rows[0] ?? {});
+  if (type === "line_chart" || columns.some((column) => /month|quarter|date|period/i.test(column))) {
+    return "the question needs movement over time and exit-rate context";
+  }
+  if (type === "stacked_bar") return "the answer needs both total performance and mix by segment";
+  if (type === "table") return "the output has several business columns that are easier to scan as rows";
+  if (type === "scatter") return "the decision depends on two risk dimensions at once";
+  return "the answer is a ranked comparison where bar length is easier to read than a table alone";
+}
+
+function unique(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+export function ChatPanel({ live, pinnedIds, onPinChart, onWorkspaceActiveChange }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const messageListRef = useRef<HTMLDivElement>(null);
   const processingStatus = useProcessingStatus(isSending);
 
   const activeCharts = useMemo(() => messages.flatMap((message) => message.charts ?? []), [messages]);
@@ -119,11 +401,24 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
   const kpiChart = displayCharts[0] ?? activeCharts[0];
   const hasConversation = messages.length > 0 || isSending;
 
+  useEffect(() => {
+    onWorkspaceActiveChange?.(hasConversation);
+  }, [hasConversation, onWorkspaceActiveChange]);
+
+  useEffect(() => {
+    const node = messageListRef.current;
+    if (!node) return;
+    window.requestAnimationFrame(() => {
+      node.scrollTo({ top: node.scrollHeight, behavior: isSending ? "smooth" : "auto" });
+    });
+  }, [messages, isSending]);
+
   async function submitPrompt(event?: FormEvent, override?: string) {
     event?.preventDefault();
     const prompt = (override ?? input).trim();
     if (!prompt || isSending) return;
 
+    const preparedResponse = buildPreparedTrustResponse(prompt, messages);
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
@@ -135,7 +430,7 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
       id: assistantId,
       role: "assistant",
       content: "",
-      trace: [],
+      trace: preparedResponse?.trace.map((item) => ({ ...item, status: "running" })) ?? [],
       charts: [],
       createdAt: Date.now(),
     };
@@ -143,6 +438,24 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
     setMessages((current) => [...current, userMessage, assistantMessage]);
     setInput("");
     setIsSending(true);
+
+    if (preparedResponse) {
+      window.setTimeout(() => {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === assistantId
+              ? {
+                  ...message,
+                  content: preparedResponse.content,
+                  trace: preparedResponse.trace,
+                }
+              : message,
+          ),
+        );
+        setIsSending(false);
+      }, 680);
+      return;
+    }
 
     try {
       const history = messages
@@ -194,7 +507,7 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
     <div className={cn("cockpit-workspace", !hasConversation && "cockpit-workspace-welcome")}>
       <section className="chat-pane">
         {hasConversation ? (
-          <div className="message-list">
+          <div className="message-list" ref={messageListRef}>
             {messages.map((message, messageIndex) => {
               const activeAssistant = isSending && message.role === "assistant" && messageIndex === messages.length - 1;
               return (
@@ -227,9 +540,9 @@ export function ChatPanel({ live, pinnedIds, onPinChart }: ChatPanelProps) {
         <div className="chat-composer">
           {hasConversation ? (
             <div className="starter-row" aria-label="Suggested follow-up prompts">
-              {starters.slice(1, 4).map((starter) => (
+              {followUpStarters.map((starter) => (
                 <button type="button" key={starter.prompt} onClick={() => void submitPrompt(undefined, starter.prompt)}>
-                  {starter.domain}
+                  {starter.label}
                 </button>
               ))}
             </div>
@@ -407,22 +720,51 @@ function WelcomeState({ onPickPrompt }: { onPickPrompt: (prompt: string) => void
   return (
     <div className="welcome-state">
       <div className="welcome-copy">
-        <span>Growing with trust · since 1889</span>
+        <span>Leadership demo bank</span>
         <h1>
-          It&apos;s about <em>trust</em>
+          Leadership questions, <em>ready</em>
         </h1>
-        <p>Ask anything about the business. The cockpit queries your data, writes its own analysis, and composes a chart for every answer.</p>
+        <p>Fire the business probes first, then use the trust probes as follow-ups to show source, assumptions, chart rationale, and limits.</p>
       </div>
 
+      <div className="query-bank">
+        <PromptSection title="P0 business questions" count={businessStarters.length} starters={businessStarters} onPickPrompt={onPickPrompt} />
+      </div>
+    </div>
+  );
+}
+
+function PromptSection({
+  title,
+  count,
+  starters,
+  onPickPrompt,
+}: {
+  title: string;
+  count: number;
+  starters: StarterPrompt[];
+  onPickPrompt: (prompt: string) => void;
+}) {
+  return (
+    <section className="query-bank-section" aria-label={title}>
+      <div className="query-bank-heading">
+        <strong>{title}</strong>
+        <span>{count} cards</span>
+      </div>
       <div className="hero-query-grid">
         {starters.map((starter) => (
           <button type="button" key={starter.prompt} onClick={() => onPickPrompt(starter.prompt)}>
-            <span>{starter.domain}</span>
-            {starter.prompt}
+            <span className="query-card-kicker">
+              <em>{starter.domain}</em>
+              <b>{starter.label}</b>
+            </span>
+            <strong>{starter.prompt}</strong>
+            <small>{starter.detail}</small>
+            {starter.anchor ? <i>{starter.anchor}</i> : null}
           </button>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 

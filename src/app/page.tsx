@@ -1,4 +1,3 @@
-import { ConformalLandingPage } from "@/components/landing";
 import { CockpitShell } from "@/components/CockpitShell";
 import { isDcmshriramSite } from "@/lib/site-variant";
 
@@ -7,5 +6,5 @@ export default function Home() {
     return <CockpitShell />;
   }
 
-  return <ConformalLandingPage />;
+  return <main aria-hidden="true" className="min-h-screen bg-white" />;
 }

@@ -27,31 +27,15 @@ const jetBrainsMono = JetBrains_Mono({
 
 const conformalMetadata: Metadata = {
   metadataBase: new URL("https://conformal.live"),
-  title: {
-    default: "Conformal | AI transformation, in working code",
-    template: "%s | Conformal",
-  },
-  description:
-    "We build the AI products that legacy enterprises actually ship, replacing slide decks with working software, six weeks at a time.",
+  title: " ",
+  description: "",
   applicationName: "Conformal",
   alternates: {
     canonical: "/",
   },
-  openGraph: {
-    title: "Conformal",
-    description:
-      "AI transformation for enterprise leaders. We ship working agents in six weeks, not slide decks in six quarters.",
-    url: "https://conformal.live",
-    siteName: "Conformal",
-    images: [{ url: "https://conformal.live/opengraph-image", width: 1200, height: 630 }],
-    locale: "en_IN",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Conformal",
-    description:
-      "AI transformation for enterprise leaders. We ship working agents in six weeks, not slide decks in six quarters.",
+  robots: {
+    index: false,
+    follow: false,
   },
 };
 

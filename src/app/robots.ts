@@ -5,7 +5,6 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/dashboard/", "/data/"],
     },
     sitemap: "https://conformal.live/sitemap.xml",
     host: "https://conformal.live",

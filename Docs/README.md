@@ -1,3 +1,19 @@
+# Documentation Index
+
+This repository now contains two distinct surfaces:
+
+- the public Conformal marketing site and journal,
+- the older SFS analytics cockpit/demo runtime.
+
+For public-site work, start with:
+
+1. **`Docs/LANDING_PAGE.md`** — Conformal landing page, journal, metadata, RSS, sitemap, and verification notes
+2. **`README.md`** — local setup and production deployment naming
+
+For the analytics cockpit/demo runtime, the legacy documentation below still applies.
+
+---
+
 # SFS Enterprise Chatbot — Demo MVP
 
 AI-powered natural language analytics for Shriram Farm Solutions. Built as a demo for DCM Shriram leadership.

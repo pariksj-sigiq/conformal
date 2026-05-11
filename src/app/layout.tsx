@@ -27,11 +27,11 @@ const jetBrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://conformal.live"),
   title: {
-    default: "Conformal",
+    default: "Conformal — AI transformation, in working code",
     template: "%s | Conformal",
   },
   description:
-    "Conformal turns four-year enterprise AI transformations into production agent programs across many engagements.",
+    "We build the AI products that legacy enterprises actually ship — replacing slide decks with working software, six weeks at a time.",
   applicationName: "Conformal",
   alternates: {
     canonical: "/",
@@ -39,16 +39,18 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Conformal",
     description:
-      "Four-year AI transformation programs delivered as many production agent engagements.",
-    url: "https://conformal.live/",
+      "AI transformation for enterprise leaders. We ship working agents in six weeks, not slide decks in six quarters.",
+    url: "https://conformal.live",
     siteName: "Conformal",
+    images: [{ url: "https://conformal.live/opengraph-image", width: 1200, height: 630 }],
+    locale: "en_IN",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Conformal",
     description:
-      "Four-year AI transformation programs delivered as many production agent engagements.",
+      "AI transformation for enterprise leaders. We ship working agents in six weeks, not slide decks in six quarters.",
   },
 };
 

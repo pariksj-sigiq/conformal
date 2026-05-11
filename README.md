@@ -24,7 +24,16 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Landing Page
 
-The public home page is the Conformal studio landing page, not the cockpit demo. Its current positioning, proof sections, component map, metadata behavior, and verification notes are documented in [`Docs/LANDING_PAGE.md`](Docs/LANDING_PAGE.md).
+The public home page is the Conformal studio landing page, not the cockpit demo. Its current positioning, proof sections, journal routes, RSS/sitemap behavior, metadata behavior, and verification notes are documented in [`Docs/LANDING_PAGE.md`](Docs/LANDING_PAGE.md).
+
+Public Conformal routes:
+
+- `/` — studio landing page
+- `/journal` — journal index with category filters
+- `/journal/[slug]` — long-form journal posts
+- `/journal/rss.xml` — RSS 2.0 feed
+- `/sitemap.xml` — home, journal, and all post URLs
+- `/robots.txt` — crawler policy for the public site
 
 ## Learn More
 
@@ -50,6 +59,7 @@ Production runs on the shared ap-south-1 EC2 host behind the existing Dockerized
 - Container: `partner-conformal`
 - Docker network: `cutcompanion_default`
 - Edge config reference: `deploy/nginx.conformal.conf`
+- RSS feed: https://conformal.live/journal/rss.xml
 
 Pushes to `main` run `.github/workflows/deploy.yml`, validate with `pnpm lint` and `pnpm build`, sync the app to EC2, rebuild the app container, and reload nginx.
 

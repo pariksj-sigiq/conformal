@@ -58,19 +58,19 @@ export default function Image() {
                 textTransform: "uppercase",
               }}
             >
-              Four-year AI transformation programs
+              AI transformation for enterprise leaders
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", fontSize: 76, lineHeight: 1.04, letterSpacing: "-0.01em" }}>
-              Delivered as many production&nbsp;
-              <span style={{ color: "#B8232E", fontStyle: "italic" }}>agent engagements.</span>
+              In working&nbsp;
+              <span style={{ color: "#B8232E", fontStyle: "italic" }}>code.</span>
             </div>
           </div>
           <div style={{ display: "flex", gap: 16, color: "rgba(11,11,12,0.58)", fontSize: 22 }}>
-            <span>Multi-engagement</span>
+            <span>Six-week agents</span>
             <span>·</span>
-            <span>Four-year arc</span>
+            <span>Enterprise systems</span>
             <span>·</span>
-            <span>In production</span>
+            <span>Auditable traces</span>
           </div>
         </div>
       </div>

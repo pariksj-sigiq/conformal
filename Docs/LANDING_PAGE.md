@@ -4,54 +4,62 @@ Last updated: May 11, 2026
 
 ## Purpose
 
-The public home page has been reframed from a single-client executive cockpit demo into the Conformal studio landing page. The page should now read as: Conformal has shipped many production AI engagements across multiple sectors over four years.
+The public home page is the Conformal studio landing page. It should read as a serious AI firm that senior enterprise buyers call when they want working software, not another transformation deck.
 
-The landing page should not feel like a press release or a startup manifesto. The voice is direct, senior, and specific: a small partner-led firm describing real work without naming clients.
+The voice is direct, senior, and specific: a small partner-led team describing real production AI work without naming clients or revealing founder identities.
 
 ## Current Page Flow
 
-The home page now follows this order:
+The home page follows this order:
 
 1. Hero
 2. Stats strip
 3. The problem we keep finding
 4. What we do
 5. Selected work
-6. How we work
-7. Final CTA
-8. Footer
+6. Our point of view
+7. Journal preview
+8. Trust & security
+9. The people
+10. Frequently asked
+11. How we work
+12. Final CTA
+13. Footer
 
 The old single-case-study flow was removed from the public landing page. In particular, the previous client trust band, recent-build screenshot block, single-client stat bar, "Why us" proof-card grid, and "Week one" simulated conversation are no longer part of the home page.
 
-## Positioning Changes
+## Positioning
 
 ### Hero
 
-The headline now says:
+The headline says:
 
 > We've spent four years making the second-oldest companies act like the youngest.
 
-The phrase "like the youngest" remains italic and uses the Conformal red `#B8232E`. The subhead and CTAs remain intentionally close to the prior version so the brand system still feels continuous.
+The phrase "like the youngest" remains italic and uses the Conformal red `#B8232E`.
 
 ### Proof Strategy
 
-The page no longer proves credibility by implying one named or easily identifiable client. It proves credibility through:
+The page proves credibility through:
 
 - aggregate operating stats,
 - anonymized but specific engagement descriptions,
 - sector breadth,
 - implementation timelines,
-- concrete capability tags.
+- concrete capability tags,
+- a sharp point of view,
+- founder credentials without founder names,
+- enterprise-buying details around security, code ownership, and model neutrality.
 
 ### Navigation
 
-The public nav is now:
+The public nav is:
 
-- Approach
-- Work
-- Journal
+- Approach -> `#approach`
+- Work -> `#selected-work`
+- Journal -> `/journal`
 
-`Work` links to `#selected-work` on the home page. "Case studies" and "Engagements" were removed from the public nav because they made the page feel either singular or too client-list oriented.
+`Journal` now links to the real journal route rather than a mailto.
 
 ## Component Map
 
@@ -65,11 +73,16 @@ Top-level public home page shell. It owns:
 - hero,
 - problem section,
 - what-we-do pillars,
+- point-of-view beliefs,
+- journal preview rows,
+- trust/security cards,
+- anonymous founder credential tables,
+- FAQ,
 - how-we-work steps,
 - final CTA,
 - footer.
 
-It imports the extracted proof components:
+It imports:
 
 - `StatsStrip`,
 - `SelectedWork`.
@@ -83,19 +96,9 @@ Renders the four-column credibility strip directly under the hero:
 - `7 weeks` median kickoff-to-production time,
 - `9 / 11` first engagements that led to a second.
 
-The number is set in Fraunces at roughly 42px and weight 500. Units such as `Cr` and `weeks` are rendered smaller at roughly 18px while preserving the same color.
-
 ### `SelectedWork.tsx`
 
 Renders the anonymized five-engagement portfolio section and the private-demo CTA. The section has the anchor `id="selected-work"` for nav scrolling.
-
-It owns the engagement data array. Engagements are intentionally specific enough to feel real and anonymized enough to avoid identifying clients:
-
-- Industrial conglomerate: CEO decision cockpit
-- Pharmaceutical manufacturer: regulatory intelligence agent
-- Specialty chemicals: procurement copilot
-- Mid-sized NBFC: early-warning credit agent
-- Family office: investment memo copilot
 
 ### `Engagement.tsx`
 
@@ -109,36 +112,111 @@ Reusable row component for each selected-work entry. Each row has:
 - three capability tags,
 - 0.5px row hairline except on the final row.
 
-## Public Metadata And Social Cards
+## Credibility Sections
 
-`src/app/layout.tsx` now uses Conformal public metadata:
+### Point Of View
+
+`PointOfViewSection` is the intellectual centerpiece of the home page. It uses a two-column intro and a 2x2 belief grid with internal 0.5px hairlines only.
+
+The four beliefs are:
+
+- Agents are the new application, not the new feature.
+- The bottleneck is data shape, not model intelligence.
+- Trust is built by showing the reasoning.
+- The deliverable is your team's fluency.
+
+### Journal Preview
+
+`JournalPreviewSection` has `id="journal"` and renders the five newest posts from `src/lib/journal.ts`. Each row links to `/journal/[slug]` and uses the same three-column row pattern as the journal index.
+
+### Trust & Security
+
+`TrustSecuritySection` has `id="trust"` and covers:
+
+- VPC deployment,
+- SOC 2 status,
+- audit trail,
+- DPIA/DPA readiness,
+- code escrow,
+- model-provider neutrality.
+
+Important accuracy note: the SOC 2 card says `SOC 2 Type II in progress` with a Q3 2026 target. Do not change it to completed certification until the report exists and can be shared under NDA.
+
+### The People
+
+`PeopleSection` uses two anonymous founder credential tables. There are no names, initials, photos, alt text, or comments that identify the founders.
+
+Credential values support `*asterisk*` muted emphasis through `renderMutedSyntax()`. The emphasized text is rendered as non-italic muted text.
+
+### FAQ
+
+`FAQSection` has `id="faq"` and uses direct answers. Do not soften the copy with "it depends" language. The pricing answer currently publishes a six-week engagement range of `₹40-80 lakh`.
+
+## Journal
+
+The journal lives on conformal.live.
+
+### Routes
+
+- `src/app/journal/page.tsx` renders `/journal`.
+- `src/app/journal/[slug]/page.tsx` renders every post from `src/lib/journal.ts`.
+- `src/app/journal/[slug]/opengraph-image.tsx` generates a unique OG image for each post.
+- `src/app/journal/rss.xml/route.ts` returns RSS at `/journal/rss.xml`.
+
+### Shared Data
+
+`src/lib/journal.ts` is the single source of truth for:
+
+- slugs,
+- categories,
+- titles,
+- deks,
+- read times,
+- published dates,
+- article bodies,
+- related-post selection,
+- RSS XML escaping.
+
+All article bodies should remain 700-1,400 words. Stubs, lorem ipsum, and placeholder sections are not acceptable.
+
+### Index Behavior
+
+`src/components/journal/JournalIndex.tsx` filters posts client-side by:
+
+- All
+- Engineering
+- Architecture
+- Strategy
+- Evaluations
+- Field notes
+- Hiring
+
+`src/components/journal/JournalChrome.tsx` mirrors the home nav/footer for journal pages.
+
+## Metadata, RSS, Sitemap, Robots
+
+`src/app/layout.tsx` uses:
 
 - `metadataBase`: `https://conformal.live`
-- title: `Conformal`
-- description: four-year, multi-engagement production-agent framing
-- Open Graph and Twitter cards no longer reference the old cockpit/demo identity
+- title: `Conformal — AI transformation, in working code`
+- description: `We build the AI products that legacy enterprises actually ship — replacing slide decks with working software, six weeks at a time.`
+- Open Graph locale: `en_IN`
 
-`src/app/opengraph-image.tsx` now renders a Conformal-branded OG image using the same multi-engagement frame:
+`src/app/opengraph-image.tsx` renders the public OG image:
 
-- eyebrow: "Four-year AI transformation programs"
-- headline: "Delivered as many production agent engagements."
-- proof line: "Multi-engagement · Four-year arc · In production"
+- eyebrow: `AI transformation for enterprise leaders`
+- headline: `In working code.`
+- proof line: `Six-week agents · Enterprise systems · Auditable traces`
 
-`src/app/twitter-image.tsx` re-exports the Open Graph image so both social surfaces stay aligned.
+`src/app/twitter-image.tsx` re-exports the Open Graph image.
 
-## Styling System
+Each journal post exports metadata from `generateMetadata()` and has a post-level generated Open Graph image.
 
-Global landing styles are defined in `src/app/globals.css`. The public page keeps the existing restrained Conformal visual language:
+`src/app/journal/rss.xml/route.ts` returns a RSS 2.0 feed with all journal posts.
 
-- white or near-white surfaces,
-- 0.5px hairlines,
-- Inter for interface copy,
-- Fraunces for display and numbers,
-- Conformal red `#B8232E` for emphasis and status,
-- rounded brand mark,
-- no screenshots or image assets in the selected-work proof section.
+`src/app/sitemap.ts` includes home, `/journal`, and every journal post.
 
-The public home page is routed from `src/app/page.tsx` to `ConformalLandingPage`.
+`src/app/robots.ts` allows all crawlers and points to `https://conformal.live/sitemap.xml`.
 
 ## Footer
 
@@ -146,15 +224,16 @@ The footer tagline remains:
 
 > AI transformation, in working code.
 
-The first footer link group is now titled `Work` and lists:
+Footer groups:
 
-- Executive cockpits
-- Agentic workflows
-- Data product audits
+- `Work`: Executive cockpits, Agentic workflows, Data product audits
+- `Company`: Approach, Journal
+- `Resources`: Trust & security, FAQ, RSS
+- `Contact`: hello@conformal.live, Gurugram · San Francisco
 
 ## README And Deployment Naming
 
-The top-level `README.md` production section now uses Conformal public naming:
+The top-level `README.md` production section uses Conformal public naming:
 
 - URL: `https://conformal.live`
 - app path: `/home/ubuntu/partner-apps/conformal`
@@ -162,55 +241,32 @@ The top-level `README.md` production section now uses Conformal public naming:
 - edge config: `deploy/nginx.conformal.conf`
 - env file: `/etc/conformal.env`
 
-This keeps the public landing/deploy docs aligned with the Conformal brand rather than the older client-specific subdomain.
-
-## Standalone HTML Reference
-
-The standalone file `/Users/pariksj/Desktop/conformal_landing_multi_client.html` was also aligned with the public landing-page direction:
-
-- nav links are `Approach`, `Work`, `Journal`,
-- `Work` points to `#selected-work`,
-- the stray public login link was removed,
-- `#approach` and `#selected-work` anchors were added.
-
-That file is outside this Git repository, so it is not part of the repo commit.
-
-## Public Copy Scrub
-
-The public landing surface was scrubbed for old one-client/demo terms across:
-
-- `README.md`,
-- `src/app`,
-- `src/components/landing`,
-- `/Users/pariksj/Desktop/conformal_landing_multi_client.html`.
-
-The scrub intentionally focused on the public landing and metadata surfaces. Internal cockpit/runtime files and older demo docs still contain old SFS/DCM/Project Leap terminology because those files describe the dashboard/demo runtime, not the public landing page.
-
 ## Verification Notes
 
-Use these checks after landing-page edits:
+Use these checks after landing-page or journal edits:
 
 ```bash
-./node_modules/.bin/eslint
+node node_modules/typescript/bin/tsc --noEmit
+node node_modules/eslint/bin/eslint.js src/components/landing/ConformalLandingPage.tsx src/components/journal/JournalChrome.tsx src/components/journal/JournalIndex.tsx src/app/journal/page.tsx 'src/app/journal/[slug]/page.tsx' 'src/app/journal/[slug]/opengraph-image.tsx' src/app/journal/rss.xml/route.ts src/lib/journal.ts src/app/layout.tsx src/app/sitemap.ts src/app/robots.ts src/app/opengraph-image.tsx
 ```
-
-For production builds inside the Codex desktop environment, prefer the workspace Node runtime to avoid macOS code-signing issues with the native Next SWC binary:
-
-```bash
-PATH="/Users/pariksj/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH" ./node_modules/.bin/next build
-```
-
-The build should report routes for `/`, `/dashboard`, metadata images, robots, sitemap, and the API routes.
 
 For copy regressions, run:
 
 ```bash
-rg -n "DCM|Shriram|SFS|Project Leap|Bain|Currently shipping|A recent build|Week one|Case studies|#engagements|Engagements|conformal-cockpit|redacted|Log in" \
-  README.md src/app/layout.tsx src/app/opengraph-image.tsx src/app/twitter-image.tsx src/app/page.tsx src/components/landing src/app/globals.css
+rg -n "Parikshit|Aanya|Devansh|Bhandari|Raghav|Saxena|DCM|Shriram|SFS|Project Leap" \
+  src/app/journal src/components/landing src/components/journal src/lib/journal.ts
 ```
 
 Expected result: no matches.
 
+For article length regressions, run:
+
+```bash
+./node_modules/.bin/tsx -e "import {posts} from './src/lib/journal'; for (const p of posts) { const words = p.sections.flatMap(s=>s.paragraphs).join(' ').split(/\\s+/).filter(Boolean).length; if (words < 700 || words > 1400) throw new Error(p.slug + ' ' + words); console.log(words, p.slug); }"
+```
+
 ## Known Boundary
 
-This page is now the public Conformal landing page. The dashboard route and backend still contain historical cockpit/demo language in code and internal docs. That should only be changed as part of a separate product/runtime cleanup, because those files are tied to the current analytics cockpit behavior.
+The public Conformal landing and journal surfaces are separate from the older analytics cockpit/demo runtime. Dashboard route, backend, and internal demo docs may still contain legacy SFS/DCM terminology because those files describe the runtime demo, not the public marketing site.
+
+During this update, local `next build` was blocked by native macOS code-signature errors in the installed Next/Tailwind binaries. Source-level checks passed, but browser/Lighthouse validation requires a clean dependency install or a runtime where the native binaries can load.

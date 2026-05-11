@@ -14,6 +14,7 @@ type ChatPanelProps = {
   pinnedIds: Set<string>;
   onPinChart: (chart: ChartBundle) => void;
   onWorkspaceActiveChange?: (active: boolean) => void;
+  resetKey?: number;
 };
 
 export type StarterPrompt = {
@@ -424,14 +425,25 @@ function unique(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 }
 
-export function ChatPanel({ live, pinnedIds, onPinChart, onWorkspaceActiveChange }: ChatPanelProps) {
+export function ChatPanel({ live, pinnedIds, onPinChart, onWorkspaceActiveChange, resetKey = 0 }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const messageListRef = useRef<HTMLDivElement>(null);
+  const activeRunRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const processingStatus = useProcessingStatus(isSending);
 
   const hasConversation = messages.length > 0 || isSending;
+
+  useEffect(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    activeRunRef.current = null;
+    setMessages([]);
+    setInput("");
+    setIsSending(false);
+  }, [resetKey]);
 
   useEffect(() => {
     onWorkspaceActiveChange?.(hasConversation);
@@ -451,6 +463,7 @@ export function ChatPanel({ live, pinnedIds, onPinChart, onWorkspaceActiveChange
     if (!prompt || isSending) return;
 
     const preparedResponse = buildPreparedTrustResponse(prompt, messages);
+    const runId = crypto.randomUUID();
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
@@ -470,9 +483,12 @@ export function ChatPanel({ live, pinnedIds, onPinChart, onWorkspaceActiveChange
     setMessages((current) => [...current, userMessage, assistantMessage]);
     setInput("");
     setIsSending(true);
+    activeRunRef.current = runId;
 
     if (preparedResponse) {
       window.setTimeout(() => {
+        if (activeRunRef.current !== runId) return;
+
         setMessages((current) =>
           current.map((message) =>
             message.id === assistantId
@@ -481,13 +497,18 @@ export function ChatPanel({ live, pinnedIds, onPinChart, onWorkspaceActiveChange
                   content: preparedResponse.content,
                   trace: preparedResponse.trace,
                 }
-              : message,
+            : message,
           ),
         );
+        activeRunRef.current = null;
         setIsSending(false);
       }, 680);
       return;
     }
+
+    const controller = new AbortController();
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = controller;
 
     try {
       const history = messages
@@ -497,6 +518,7 @@ export function ChatPanel({ live, pinnedIds, onPinChart, onWorkspaceActiveChange
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({ question: prompt, history }),
       });
 
@@ -504,11 +526,15 @@ export function ChatPanel({ live, pinnedIds, onPinChart, onWorkspaceActiveChange
       if (!response.body) throw new Error("Chat stream did not start.");
 
       await consumeNdjson(response.body, (eventData) => {
+        if (activeRunRef.current !== runId) return;
+
         setMessages((current) =>
           current.map((message) => (message.id === assistantId ? applyChatEvent(message, eventData) : message)),
         );
       });
     } catch (error) {
+      if (controller.signal.aborted || activeRunRef.current !== runId) return;
+
       setMessages((current) =>
         current.map((message) =>
           message.id === assistantId
@@ -531,7 +557,11 @@ export function ChatPanel({ live, pinnedIds, onPinChart, onWorkspaceActiveChange
         ),
       );
     } finally {
-      setIsSending(false);
+      if (activeRunRef.current === runId) {
+        activeRunRef.current = null;
+        if (abortControllerRef.current === controller) abortControllerRef.current = null;
+        setIsSending(false);
+      }
     }
   }
 

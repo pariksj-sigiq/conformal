@@ -510,6 +510,27 @@ textarea:focus-visible {
   font-weight: 700;
 }
 
+.breadcrumb-home {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  padding: 0;
+}
+
+.breadcrumb-home:hover strong {
+  color: var(--accent);
+}
+
+.breadcrumb-home:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  outline-offset: 4px;
+}
+
 .breadcrumb span {
   color: #c5c0bb;
   font-weight: 300;

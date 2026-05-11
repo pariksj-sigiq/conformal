@@ -28,6 +28,7 @@ export function CockpitShell() {
   const [live, setLive] = useState(false);
   const [pinnedCharts, setPinnedCharts] = usePinnedCharts();
   const [workspaceActive, setWorkspaceActive] = useState(false);
+  const [cockpitResetKey, setCockpitResetKey] = useState(0);
 
   useEffect(() => {
     if (!live) return;
@@ -113,7 +114,14 @@ export function CockpitShell() {
       <div className="app-main">
         <header className="top-bar">
           <div className="breadcrumb">
-            <strong>Executive Cockpit</strong>
+            <button
+              type="button"
+              className="breadcrumb-home"
+              aria-label="Return to the Executive Cockpit home screen"
+              onClick={() => setCockpitResetKey((current) => current + 1)}
+            >
+              <strong>Executive Cockpit</strong>
+            </button>
             <span>/</span>
             <em>Shriram Farm Solutions</em>
           </div>
@@ -128,7 +136,13 @@ export function CockpitShell() {
           </div>
         </header>
 
-        <ChatPanel live={live} pinnedIds={pinnedIds} onPinChart={togglePin} onWorkspaceActiveChange={setWorkspaceActive} />
+        <ChatPanel
+          live={live}
+          pinnedIds={pinnedIds}
+          resetKey={cockpitResetKey}
+          onPinChart={togglePin}
+          onWorkspaceActiveChange={setWorkspaceActive}
+        />
       </div>
     </main>
   );

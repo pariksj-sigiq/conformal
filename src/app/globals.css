@@ -815,10 +815,10 @@ textarea:focus-visible {
   min-height: 0;
   align-content: start;
   justify-items: center;
-  gap: clamp(16px, 2.4vh, 24px);
+  gap: clamp(14px, 2vh, 20px);
   overflow-y: auto;
-  padding: clamp(18px, 3vh, 30px) 34px 32px;
-  text-align: center;
+  padding: clamp(18px, 3vh, 28px) 34px 32px;
+  text-align: left;
 }
 
 .cockpit-workspace-welcome .welcome-state {
@@ -827,22 +827,27 @@ textarea:focus-visible {
 }
 
 .welcome-copy {
-  max-width: 760px;
+  width: min(1120px, 100%);
+  max-width: none;
 }
 
 .welcome-copy span {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  color: #6f6860;
   font-size: 12px;
+  font-weight: 820;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .welcome-copy h1 {
   margin: 0;
   font-family: var(--font-serif);
-  font-size: clamp(36px, 3.7vw, 54px);
+  font-size: clamp(32px, 3.2vw, 46px);
   font-weight: 500;
   letter-spacing: 0;
-  line-height: 1.05;
+  line-height: 1.08;
 }
 
 .welcome-copy h1 em {
@@ -852,12 +857,12 @@ textarea:focus-visible {
 }
 
 .welcome-copy p {
-  margin: 12px auto 0;
-  max-width: 680px;
+  margin: 8px 0 0;
+  max-width: 740px;
   color: #3d3b37;
-  font-size: clamp(14px, 1.05vw, 17px);
+  font-size: clamp(13px, 0.95vw, 15px);
   font-weight: 560;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .question-bank-build {

@@ -8,7 +8,8 @@ This repository now contains two distinct surfaces:
 For public-site work, start with:
 
 1. **`Docs/LANDING_PAGE.md`** — Conformal landing page, journal, metadata, RSS, sitemap, and verification notes
-2. **`README.md`** — local setup and production deployment naming
+2. **`amplify.yml`** — AWS Amplify Hosting build spec for the public site
+3. **`README.md`** — local setup and hosting notes
 
 For the analytics cockpit/demo runtime, the legacy documentation below still applies.
 

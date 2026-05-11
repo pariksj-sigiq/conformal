@@ -244,15 +244,19 @@ Footer groups:
 - `Resources`: Trust & security, FAQ, RSS
 - `Contact`: hello@conformal.live, Gurugram · San Francisco
 
-## README And Deployment Naming
+## Hosting And Deployment
 
-The top-level `README.md` production section uses Conformal public naming:
+The public Conformal site is hosted on AWS Amplify Hosting, connected to the GitHub `main` branch.
 
-- URL: `https://conformal.live`
-- app path: `/home/ubuntu/partner-apps/conformal`
-- container: `partner-conformal`
-- edge config: `deploy/nginx.conformal.conf`
-- env file: `/etc/conformal.env`
+- Production URL: `https://conformal.live`
+- Amplify region: `ap-south-1`
+- Amplify app ID: `dlwwm3b70gv88`
+- Amplify branch: `main`
+- Build spec: `amplify.yml`
+
+Route53 keeps the apex `conformal.live` as an alias to the Amplify-managed CloudFront target. The `dcmshriram.conformal.live` record remains on EC2 for the analytics cockpit/demo runtime.
+
+Do not deploy the Conformal public site through the EC2 Docker/nginx path unless you are deliberately rolling back Amplify. Amplify is now the source of truth for public landing-page and journal deploys.
 
 ## Verification Notes
 

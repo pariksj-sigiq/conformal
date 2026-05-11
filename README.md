@@ -35,6 +35,17 @@ Public Conformal routes:
 - `/sitemap.xml` — home, journal, and all post URLs
 - `/robots.txt` — crawler policy for the public site
 
+## Hosting
+
+`conformal.live` is hosted on AWS Amplify Hosting from the GitHub `main` branch.
+
+- Amplify app ID: `dlwwm3b70gv88`
+- Region: `ap-south-1`
+- Build spec: `amplify.yml`
+- Custom domain: `conformal.live`
+
+The EC2/nginx path is still used for `dcmshriram.conformal.live`, not for the public Conformal landing page.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

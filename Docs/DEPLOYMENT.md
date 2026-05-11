@@ -51,9 +51,9 @@ Validation:
 
 1. Install dependencies with pnpm.
 2. Run TypeScript and lint checks.
-3. Build `SITE_VARIANT=conformal` for the public site.
-4. Build `SITE_VARIANT=dcmshriram` for the demo.
-5. Validate the Docker Compose files.
+3. Validate the Docker Compose files.
+
+GitHub Actions deliberately does not duplicate the production Next.js builds. Amplify builds `conformal.live` with `amplify.yml`, and the EC2 deploy builds the DCM app/backend through Docker before restarting containers.
 
 Deployment:
 

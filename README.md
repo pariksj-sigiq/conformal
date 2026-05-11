@@ -61,9 +61,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 The production pipeline is split cleanly:
 
-- GitHub Actions validates `main` and pull requests with install, TypeScript, lint, the Conformal build, the DCM demo build, and Docker Compose config checks.
+- GitHub Actions validates `main` and pull requests with install, TypeScript, lint, and Docker Compose config checks. It does not duplicate production builds.
 - AWS Amplify Hosting is connected to `main` and performs the `conformal.live` production build/deploy with `amplify.yml`.
-- The same GitHub Actions run deploys the DCM demo to EC2 at `dcmshriram.conformal.live` after validation succeeds.
+- The same GitHub Actions run deploys the DCM demo to EC2 at `dcmshriram.conformal.live`, where Docker builds the app and backend before restart.
 
 ## Production
 

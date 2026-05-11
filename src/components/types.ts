@@ -29,6 +29,7 @@ export type ChartBundle = {
   analysisContent?: string;
   analysisTrace?: TraceEvent[];
   relatedCharts?: string[];
+  linkedChartArtifacts?: ChartBundle[];
 };
 
 export type ChatMessage = {

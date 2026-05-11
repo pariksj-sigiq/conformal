@@ -119,7 +119,11 @@ function DashboardTile({ chart, live, onRemove }: { chart: ChartBundle; live: bo
   };
 
   return (
-    <article ref={setRefs} style={style} className={cn("dashboard-tile", isDragging && "dashboard-tile-dragging", isOver && "dashboard-tile-over")}>
+    <article
+      ref={setRefs}
+      style={style}
+      className={cn("dashboard-tile", chart.visualType === "analysis_report" && "dashboard-tile-report", isDragging && "dashboard-tile-dragging", isOver && "dashboard-tile-over")}
+    >
       <div className="tile-toolbar">
         <button type="button" title="Drag chart" {...listeners} {...attributes}>
           <GripVertical size={16} />

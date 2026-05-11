@@ -620,7 +620,7 @@ function InlineAnalysisArtifacts({
   onPinChart: (chart: ChartBundle) => void;
 }) {
   const charts = pickDisplayCharts(message.charts ?? []);
-  const report = buildPinnedAnalysisReport(message);
+  const report = buildPinnedAnalysisReport(message, charts);
   const canPinReport = Boolean(message.content.trim() || charts.length);
 
   if (!charts.length && !canPinReport) return null;
@@ -647,7 +647,8 @@ function InlineAnalysisArtifacts({
   );
 }
 
-function buildPinnedAnalysisReport(message: ChatMessage): ChartBundle {
+function buildPinnedAnalysisReport(message: ChatMessage, charts: ChartBundle[]): ChartBundle {
+  const linkedCharts = charts.filter((chart) => chart.visualType !== "analysis_report");
   return {
     id: `analysis-report-${message.id}`,
     title: "Full analysis",
@@ -658,8 +659,18 @@ function buildPinnedAnalysisReport(message: ChatMessage): ChartBundle {
     generatedAt: Date.now(),
     analysisContent: message.content.trim(),
     analysisTrace: message.trace,
-    relatedCharts: (message.charts ?? []).map((chart) => chart.title),
+    relatedCharts: linkedCharts.map((chart) => chart.title),
+    linkedChartArtifacts: linkedCharts.map(stripNestedReportPayload),
   };
+}
+
+function stripNestedReportPayload(chart: ChartBundle): ChartBundle {
+  const artifact = { ...chart };
+  delete artifact.linkedChartArtifacts;
+  delete artifact.analysisContent;
+  delete artifact.analysisTrace;
+  delete artifact.relatedCharts;
+  return artifact;
 }
 
 function ChatComposer({

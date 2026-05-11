@@ -173,7 +173,7 @@ export function LiveChart({ chart, live = true, pinned, compact, onPin, onRemove
 
       <div className="chart-canvas">
         {isAnalysisReport ? (
-          <GeneratedAnalysisReport chart={chart} />
+          <GeneratedAnalysisReport chart={chart} live={live} compact={compact} />
         ) : query.loading && !query.rows.length ? (
           <div className="chart-loading">Running SQL and preparing chart</div>
         ) : query.error ? (
@@ -394,27 +394,35 @@ function GeneratedTable({ chart, rows }: { chart: ChartBundle; rows: Record<stri
   );
 }
 
-function GeneratedAnalysisReport({ chart }: { chart: ChartBundle }) {
+function GeneratedAnalysisReport({ chart, live, compact }: { chart: ChartBundle; live: boolean; compact?: boolean }) {
   const trace = chart.analysisTrace ?? [];
   const completed = trace.filter((item) => item.status === "complete").length;
   const errored = trace.filter((item) => item.status === "error").length;
+  const linkedArtifacts = chart.linkedChartArtifacts ?? [];
 
   return (
-    <div className="analysis-report-card">
+    <div className={cn("analysis-report-card", linkedArtifacts.length && "analysis-report-card-has-artifacts")}>
       <div className="analysis-report-summary">
         <strong>{stripInlineMarkdown(chart.analysisContent || chart.description || "Pinned analysis from the cockpit conversation.")}</strong>
         <span>
           {completed} completed artifacts
           {errored ? ` · ${errored} needs review` : ""}
-          {chart.relatedCharts?.length ? ` · ${chart.relatedCharts.length} linked charts` : ""}
+          {linkedArtifacts.length ? ` · ${linkedArtifacts.length} linked charts` : chart.relatedCharts?.length ? ` · ${chart.relatedCharts.length} linked charts` : ""}
         </span>
       </div>
-      {chart.relatedCharts?.length ? (
+      {!linkedArtifacts.length && chart.relatedCharts?.length ? (
         <ul className="analysis-report-links">
           {chart.relatedCharts.slice(0, 6).map((title) => (
             <li key={title}>{title}</li>
           ))}
         </ul>
+      ) : null}
+      {linkedArtifacts.length ? (
+        <div className="analysis-report-artifacts" aria-label="Pinned analysis charts">
+          {linkedArtifacts.map((artifact) => (
+            <LiveChart key={artifact.id} chart={artifact} live={live} compact={compact} />
+          ))}
+        </div>
       ) : null}
     </div>
   );
@@ -659,7 +667,7 @@ function analysisReportToText(chart: ChartBundle) {
     chart.title,
     chart.description ?? "",
     chart.analysisContent ?? "",
-    chart.relatedCharts?.length ? `Linked charts: ${chart.relatedCharts.join(", ")}` : "",
+    chart.linkedChartArtifacts?.length ? `Linked charts: ${chart.linkedChartArtifacts.map((artifact) => artifact.title).join(", ")}` : chart.relatedCharts?.length ? `Linked charts: ${chart.relatedCharts.join(", ")}` : "",
   ];
   return lines.filter(Boolean).join("\n\n");
 }

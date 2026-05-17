@@ -58,7 +58,7 @@ Data quirks and guardrails
   - procurement_spend or fact_procurement -> Procurement
   - farmer_engagement -> Farmer engagement
   - commodity_prices or fact_commodity_prices -> Markets
-  - wave1_microbattles -> Project Leap
+  - wave1_microbattles -> Conformal
   - secondary_sales or fact_secondary_sales -> Sales
 - Chart titles and chart eyebrow labels must never contain a SQL table name or snake_case internal name. Use business domains only.
 - Revenue is not exactly unit price times quantity. Use net_value_inr directly for revenue questions.

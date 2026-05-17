@@ -41,14 +41,14 @@ const conformalMetadata: Metadata = {
 
 const dcmshriramMetadata: Metadata = {
   metadataBase: new URL("https://dcmshriram.conformal.live"),
-  title: "Project Leap Cockpit",
+  title: "Conformal Cockpit",
   description: "Executive cockpit for Shriram Farm Solutions",
-  applicationName: "Project Leap Cockpit",
+  applicationName: "Conformal Cockpit",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Project Leap Cockpit",
+    title: "Conformal Cockpit",
     description: "Executive cockpit for Shriram Farm Solutions",
     url: "https://dcmshriram.conformal.live/",
     siteName: "Shriram Farm Solutions",
@@ -56,7 +56,7 @@ const dcmshriramMetadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Project Leap Cockpit",
+    title: "Conformal Cockpit",
     description: "Executive cockpit for Shriram Farm Solutions",
   },
 };

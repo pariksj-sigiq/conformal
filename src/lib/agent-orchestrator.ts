@@ -84,10 +84,10 @@ const ROUTE_DOMAINS: Record<RouteId, string> = {
   collections: "Collections",
   field_force: "Field force",
   procurement: "Procurement",
-  regulatory: "Project Leap",
+  regulatory: "Conformal",
   commodity: "Markets",
   nps: "Farmer engagement",
-  microbattle: "Project Leap",
+  microbattle: "Conformal",
   churn: "Channel partners",
 };
 
@@ -105,7 +105,7 @@ const TABLE_DOMAINS: Record<string, string> = {
   farmer_engagement: "Farmer engagement",
   commodity_prices: "Markets",
   fact_commodity_prices: "Markets",
-  wave1_microbattles: "Project Leap",
+  wave1_microbattles: "Conformal",
   secondary_sales: "Sales",
   fact_secondary_sales: "Sales",
   fact_primary_sales: "Sales",
@@ -114,7 +114,7 @@ const TABLE_DOMAINS: Record<string, string> = {
   fact_targets: "Sales",
   inventory_enriched: "Inventory",
   collections_enriched: "Collections",
-  fact_regulatory_pipeline: "Project Leap",
+  fact_regulatory_pipeline: "Conformal",
 };
 
 const ROUTE_CATALOG = Object.entries(ROUTE_PROMPTS).map(([route, prompt]) => ({ route, example: prompt, primary_table: ROUTE_LABELS[route as RouteId] }));
@@ -391,7 +391,7 @@ async function runVisualAgent(message: string, checker: CheckerOutput, sql: stri
           "The final narrative must be at most 3 sentences total, no bullets, no labels like Insight or Chart observations.",
           "Use ₹ for money. Never use Latin-letter rupee abbreviations.",
           "The chart title and description must never contain SQL table names or snake_case internal names.",
-          "Use business domains instead: Finance, Field force, Sales, Procurement, Farmer engagement, Markets, Project Leap, Channel partners.",
+          "Use business domains instead: Finance, Field force, Sales, Procurement, Farmer engagement, Markets, Conformal, Channel partners.",
           `Question: ${message}`,
           `Checker output: ${JSON.stringify(checker, null, 2)}`,
           `SQL: ${sql}`,

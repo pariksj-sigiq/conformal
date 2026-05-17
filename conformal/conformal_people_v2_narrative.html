@@ -1,0 +1,103 @@
+
+<h2 class="sr-only">Conformal People section, redesigned as narrative bios with horizontal flow</h2>
+<style>
+.frame{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
+.section{padding:80px 56px}
+.divider{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-tertiary);font-weight:500;display:flex;align-items:center;gap:14px;margin:0 0 28px}
+.divider::after{content:"";flex:1;height:0.5px;background:var(--color-border-tertiary)}
+.f{padding:36px 0;border-bottom:0.5px solid var(--color-border-tertiary);display:grid;grid-template-columns:200px 1fr;gap:48px;align-items:start}
+.f:last-of-type{border-bottom:none}
+.q{font-family:var(--font-serif);font-size:21px;font-weight:400;color:var(--color-text-primary);line-height:1.4;margin:0 0 18px;letter-spacing:-.005em}
+.q em{color:#B8232E;font-style:italic}
+.bio{font-size:14.5px;color:var(--color-text-secondary);line-height:1.75;margin:0 0 14px}
+.bio:last-child{margin-bottom:0}
+.bio strong{font-weight:500;color:var(--color-text-primary)}
+.bio em{font-style:normal;color:var(--color-text-tertiary)}
+.tag{display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-size:11px;color:var(--color-text-secondary);background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);margin-right:4px;margin-bottom:4px;letter-spacing:.01em;font-weight:500}
+.dot{width:38px;height:38px;border-radius:50%;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary)}
+.lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#B8232E;font-weight:500;margin:0 0 4px}
+.role{font-size:13px;color:var(--color-text-primary);font-weight:500;margin:0}
+</style>
+
+<div class="frame">
+
+<div class="section">
+
+  <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:64px;align-items:end;margin-bottom:48px">
+    <div>
+      <p class="divider">The people</p>
+      <h2 style="font-family:var(--font-serif);font-weight:400;color:var(--color-text-primary);line-height:1.15;font-size:36px;margin:0;letter-spacing:-.01em">A small team. <em style="color:#B8232E">Senior on every call.</em></h2>
+    </div>
+    <div>
+      <p style="font-size:15px;color:var(--color-text-secondary);line-height:1.75;margin:0">Conformal is built around two founders and a small group of engineers. Every engagement is staffed by two senior people, full-time — no analyst layer, no partner who shows up at kickoff and vanishes. You speak with the people writing the code.</p>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column">
+
+    <div class="f">
+      <div>
+        <div class="dot" style="margin-bottom:14px"></div>
+        <p class="lbl">Co-founder</p>
+        <p class="role">Engineering</p>
+        <div style="margin-top:18px;display:flex;flex-wrap:wrap">
+          <span class="tag">BITS Pilani</span>
+          <span class="tag">Amazon</span>
+          <span class="tag">Microsoft App Store</span>
+        </div>
+      </div>
+      <div>
+        <p class="q">Built and scaled the platforms. The kind of engineer who ships <em>agentic systems</em> in production, not in slide decks.</p>
+        <p class="bio">Currently VP Engineering at an AI-native education company, architecting <strong>multimodal LLM systems</strong> — speech-to-text, reasoning, and voice synthesis stitched together at sub-second latency across distributed US–India teams.</p>
+        <p class="bio">Before that, Principal Engineer at an enterprise SaaS company, where he <strong>scaled the flagship product from 10,000 to over 600,000 users</strong> across the largest global IT services firms, and shipped an agentic AI assistant published on the Microsoft Teams App Store. The platform he built now runs production workloads for roughly a fifth of the Indian IT services market.</p>
+        <p class="bio">Earlier, senior engineer at <em>Amazon</em>, where he built core payment experiences — Scan & Pay, the Amazon Pay merchant ecosystem. Co-founded two startups along the way, one of which processed <strong>100,000+ monthly orders</strong> at peak.</p>
+      </div>
+    </div>
+
+    <div class="f">
+      <div>
+        <div class="dot" style="margin-bottom:14px"></div>
+        <p class="lbl">Co-founder</p>
+        <p class="role">Strategy</p>
+        <div style="margin-top:18px;display:flex;flex-wrap:wrap">
+          <span class="tag">Wharton MBA</span>
+          <span class="tag">Accel</span>
+          <span class="tag">General Catalyst</span>
+          <span class="tag">BCG</span>
+          <span class="tag">30 Under 30</span>
+        </div>
+      </div>
+      <div>
+        <p class="q">Funded and shipped the bets. The kind of operator who has sat <em>on both sides</em> of the table.</p>
+        <p class="bio">Currently heads market insights at a high-growth AI company, leading <strong>GTM, product strategy, and M&A</strong> — the kind of role where decisions get made in a Slack thread and shipped that week.</p>
+        <p class="bio">Spent two years investing at <em>General Catalyst, Accel, and WestBridge Capital</em> across <strong>GenAI, software, cybersecurity, and consumer.</strong> Sourced and led diligence on companies now valued in the billions. Before that, two years at <em>Boston Consulting Group</em> driving large-scale transformation programs across BFSI, IT, consumer, and healthcare.</p>
+        <p class="bio">Wharton MBA. Named a <strong>30 Under 30 Global Business Leader.</strong> Has also published peer-reviewed research on AI in drug discovery — back when "AI in drug discovery" wasn't a pitch.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="padding:32px 0 0;margin-top:8px;border-top:0.5px solid var(--color-border-tertiary)">
+    <p class="divider" style="margin:0 0 18px">Between the two founders</p>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px">
+      <div>
+        <p style="font-family:var(--font-serif);font-size:34px;font-weight:500;color:var(--color-text-primary);line-height:1;margin:0">600K<span style="font-size:18px;font-weight:400">+</span></p>
+        <p style="font-size:12px;color:var(--color-text-tertiary);margin:8px 0 0;line-height:1.5">Users on platforms they've shipped</p>
+      </div>
+      <div>
+        <p style="font-family:var(--font-serif);font-size:34px;font-weight:500;color:var(--color-text-primary);line-height:1;margin:0">4</p>
+        <p style="font-size:12px;color:var(--color-text-tertiary);margin:8px 0 0;line-height:1.5">Companies founded between them</p>
+      </div>
+      <div>
+        <p style="font-family:var(--font-serif);font-size:34px;font-weight:500;color:var(--color-text-primary);line-height:1;margin:0">3</p>
+        <p style="font-size:12px;color:var(--color-text-tertiary);margin:8px 0 0;line-height:1.5">Venture funds invested across</p>
+      </div>
+      <div>
+        <p style="font-family:var(--font-serif);font-size:34px;font-weight:500;color:var(--color-text-primary);line-height:1;margin:0">10<span style="font-size:18px;font-weight:400">+ yrs</span></p>
+        <p style="font-size:12px;color:var(--color-text-tertiary);margin:8px 0 0;line-height:1.5">Building and funding software</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>

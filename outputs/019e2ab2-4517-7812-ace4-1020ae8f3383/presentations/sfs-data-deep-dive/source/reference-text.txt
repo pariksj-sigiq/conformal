@@ -1,0 +1,1027 @@
+AI Transformation for
+Shriram Farm Solutions
+INTRO PACK
+
+MAY 2026
+
+Conformal
+
+TEAM
+
+Builders and operators. AI and Services.
+SIDDHANT DANG
+
+PARIKSHIT JOON
+
+Crescendo: Led vertical AI applications at the
+frontline of CX services and transformation
+(0 → $B+ platform in 2-yrs)
+
+SigIQ: Building frontier agentic AI, architecting
+multimodal LLM systems and the production
+patterns that ship
+
+BCG: Drove large-scale operating transformation
+and digitization programs
+
+Prismforce: Scaled the AI platform serving 25% of
+India's IT services industry (10K → 600K+ users)
+
+Accel and General Catalyst: Investments &
+portfolio support across AI & software
+
+Microsoft Teams & Copilot: Shipped SkillPrism,
+an agentic AI assistant for 300k enterprise users
+(one of the first 10 apps published on Copilot)
+
+Wharton (UPenn): Finance, strategy, and capital
+allocation; US AI & tech networks
+BITS Pilani: Engineering foundation
+BITSAA 30 Under 30: Global Business Leader
+
+Amazon Pay: Built core merchant experiences
+(Scan & Pay); integrated with SAP/Oracle ERP and
+POS integrations at India’s largest enterprises
+BITS Pilani: Engineering foundation
+
+Conformal
+
+EXECUTIVE SUMMARY
+
+From diagnostic to deployed AI
+THESIS
+
+Partner with SFS to design and deploy AI across value chain – from a CEO decision cockpit to vernacular
+farmer–facing agents – through a unified platform of AI Copilots, Autopilots, and Console that operates them.
+DIAGNOSTIC
+
+Project Leap surfaced 215 use cases across 12 solutions; 12 hero priorities for Wave 1 (0–12 months) – spanning
+farmer engagement, channel-partner workflows, manufacturing, R&D, andan enterprise CEO cockpit. SFS sits at
+digital maturity of 2.1/5 today (integration 1.4, analytics 1.0); foundation needs to be built in parallel with use cases.
+APPROACH
+
+Conformal embeds with SFS teams to build, ship, and operate use cases – Three layers of AI tech (Copilots,
+Autopilots, Conformal Console) delivered through a Diagnose & Design → Build & Run → Drive & Expand lifecycle,
+with forward–deployed engineering on the ground.
+OUTCOME
+
+Decision velocity for executives. Productivity uplift for field, channel partner, and farmer–facing teams.
+Vernacular engagement at scale. Margin and working capital gains across procurement, manufacturing, and finance
+– quantified by Bain at INR 50–80 Cr topline (field force) and INR 10–15 Cr savings (procurement) within 2 years.
+TEAM
+
+Builder leadership combining enterprise AI scale (Amazon, Crescendo), large–scale operating transformation
+(BCG), and India SME capital experience (Accel). BITS Pilani · Wharton.
+
+Conformal
+
+LEARNINGS
+
+Data foundation gates every function
+AI POWERED INSIGHTS AND ANALYTICS
+Use case: Natural language based analysis, insights, and dashboarding capabilities
+Key gate: Data foundation
+
+SALES & MKTG.
+
+PROCUREMENT
+
+R&D
+
+Use case: Sales
+enablement,
+customer
+engagement
+
+Use case: Vendor &
+contract
+intelligence
+
+Use case: NPD,
+Rapid
+experimentation/
+simulations
+
+Key gates: Data
+backbone, change
+mgmt. & adoption
+
+Key gates: Data
+foundation
+
+Key gates:
+Structured
+knowledge base
+
+MFG.
+Use case:
+Real–time mfg.
+Intelligence
+Key gates:
+Hardware, SAP
+adoption, data
+foundation
+
+LOGISTICS &
+WAREHOUSING
+Use case:
+End–to–end
+visibility
+Key gates: Data
+systems
+
+DATA SYSTEMS + DATA STORES
+Foundation gates everything. SFS today: Integration 1.4/5, analytics 1.0/5 (Bain DMA)
+Wave 1 must address data plumbing in parallel – agents are only as good as the data they query
+
+Conformal
+
+SUPPORT
+FUNCTIONS
+Use case: Digital
+workflows
+Key gates: Data
+systems
+
+AI TRANSFORMATION PLATFORM
+
+One platform. Three AI Products: Copilots,
+Autopilots, and Conformal Console
+CONFORMAL AI COPILOTS
+
+CONFORMAL AI AUTOPILOTS
+
+USER FACING AI THAT AUGMENTS JUDGEMENT IN
+REAL–TIME
+
+AGENTIC WORKFLOW THAT RUNS END–TO–END WITHOUT
+HUMAN–IN–THE–LOOP
+
+Decision Authority: Human stays in the driver's seat; AI
+accelerates the work
+
+Decision Authority: Agent decides and acts; Humans
+review exceptions
+
+Best for: Knowledge work and field judgement – CEO
+Cockpit, TBM Voice Assistant, R&D, Variance Analysis
+
+Best for: Bulk reconciliations, farmer campaigns, channel
+& field sales workflows, freight, exception monitoring
+
+Surface: Chat, voice, UI panels embedded in existing and
+new apps
+
+Surface: API and system integrations; runs in the
+background
+
+CONFORMAL CONSOLE
+Performance · Cost · Accuracy · Drift · Escalations · Approvals · Access controls · Usage & ROI by use case
+
+Built and delivered by Conformal forward–deployed engineering teams
+Conformal
+
+USE CASES
+
+The full opportunity: 215 AI use cases, 12 solutions
+AI POWERED INSIGHTS AND ANALYTICS
+Enterprise (CEO Chatbot) · 1 cross-functional decision cockpit · Wave 1A priority
+SALES & MKTG.
+
+PROCUREMENT
+
+84 use cases
+
+~20 use cases
+
+Sales and
+distribution/ channel
+enablement
+
+Vendor assessment
+
+Automated farmer
+engagement
+
+Contract intelligence
+
+LOGISTICS &
+WAREHOUSING
+
+~20 use cases
+End–to–end
+workflow tracking
+Real–time tracking
+and monitoring
+
+Enablement
+(negotiation prep)
+
+MANUFACTURING
+
+R&D
+
+15 use cases
+
+31 use cases
+
+End–to–end
+workflow tracking
+
+Rapid prototyping,
+and experimentation
+
+Real–time tracking
+and monitoring
+
+AI–first simulations
+
+SUPPORT
+FUNCTIONS
+
+44 use cases
+Self–service model
+Workflow
+digitization
+Automated analysis
+and insights
+
+DATA SYSTEMS + DATA STORES
+SAP · Salesforce · Growth Book · ByteEdge · Mandi & weather feeds · IoT · Soil data · …
+LEGEND
+
+Conformal
+
+WAVE 1A PRIORITY
+
+REQUIRES FURTHER DIAGNOSIS
+
+Source: Project Leap report, Mar 2026 (Bain AI and Digital Trasnformation Strategy)
+Note: Link to Notion database – use cases categorized by function, product, tentative timeline, impact & feasibility
+
+REQUIRES FURTHER DIAGNOSIS
+
+USE CASE PRIORITIZATION
+
+Product–wise build approach ensures coverage and
+one–shot, robust fixes
+Project Leap prioritizes use
+cases based on impact and
+feasibility, however does not
+factor in execution realities
+
+Conformal
+
+We recommend a function–by–function,
+product–ﬁrst execution and dev approach
+
+Source: Project Leap report, Mar 2026 (Bain AI and Digital Transformation Strategy)
+Note: Link to Notion database – use cases categorized by function, product, tentative timeline, impact & feasibility
+
+DEMO – ENTERPRISE COCKPIT (CEO CHATBOT)
+
+Ask a question. The whole enterprise answers.
+FEATURE HIGHLIGHTS
+Cross-functional context
+Unified knowledge base across Sales, Mfg,
+Procurement, Finance, R&D, …
+
+Natural language queries
+Ask in English or Hindi; structured answers with
+sources and chain of thought tracking
+
+Real-time signal aggregation
+Performance, anomaly, and exception alerts
+surfaced proactively
+
+Drill-down to source
+From summary → underlying transaction or
+system of record
+
+Voice + text input
+Optimized for executive on-the-go usage
+
+Enterprise integration
+SAP · Salesforce · Growth Book · data warehouse
+
+Audit trail & access controls
+Role-based permissions; full query log retained
+
+Conformal
+
+Saved analysis and reports
+Analyses once created can be saved as
+reports for recurring use cases
+AI TOOLS CAN NOW REPLACE
+LEGACY BI TOOLS
+
+Agentic AI Agent Set 1
+Interprets natural language based user
+query
+Plans analyses and identifies relevant
+data sources
+Builds SQL queries to extract relevant
+data
+
+Agentic AI Agent Set 2
+Derives insights from extract data and
+user query + intent
+Creates relevant visualizations and
+charts to present information
+
+Conformal
+
+TRANSFORMATION APPROACH
+
+Diagnose. Build. Drive. Embedded with you.
+PHASE 1
+
+PHASE 2
+
+PHASE 3
+
+DIAGNOSE & DESIGN
+
+BUILD & RUN
+
+DRIVE ADOPTION & EXPAND
+
+DURATION
+
+DURATION
+
+DURATION
+
+4–8 weeks
+
+12–24 weeks per Wave
+
+Ongoing
+
+Frame the opportunity, prioritize,
+architect the solution.
+
+Embed with SFS teams. Ship working
+software, not documents and slides.
+
+Operate, evolve, and expand the
+platform.
+
+KEY ACTIVITIES
+
+KEY ACTIVITIES
+
+KEY ACTIVITIES
+
+· Use case prioritization workshop
+· Data audit & integration scoping
+· Solution architecture & roadmap
+· Wave 1 sprint plan
+
+· Forward-deployed engineering
+· Agile builds in 2-week sprints
+· User co-design with SFS teams
+· Pilot → production handoﬀ
+
+· Change management & training
+· 24×7 operations & SLAs
+· Knowledge transfer to SFS IT
+· Wave 2 / Wave 3 expansion
+
+DELIVERABLE
+
+DELIVERABLE
+
+DELIVERABLE
+
+Transformation execution roadmap +
+Wave 1 SOW
+
+Live use cases with measured early
+impact + ROI study plan
+
+Value realization. Sustained ops +
+roadmap to next wave
+
+Conformal
+
+NEXT STEPS
+
+Eight weeks from alignment to first builds
+1
+
+Week 0–1
+
+2
+
+Week 2–3
+
+3
+
+Week 4
+
+4
+
+Week 5–6
+
+5
+
+Week 8
+
+Conformal
+
+Workshop alignment – follow-up meeting
+Confirm scope, stakeholders, and data access. Sign mutual NDA and align on Wave 1 success
+criteria.
+
+Diagnostic workshops
+Joint working session with SFS leadership across functions. Validate Project Leap priorities;
+surface dependencies.
+
+Wave 1 prioritization
+Ranked use case list with business case (impact, feasibility, sequencing). Joint sign-oﬀ on
+top 5–6 to scope first.
+
+Pilot scoping & SOW
+Detailed scope, architecture, and success metrics for first 2 use cases. Commercial construct
++ delivery plan.
+
+Pilot kickoﬀ
+Begin Build & Run for first wave. Forward-deployed team embeds with SFS counterparts.
+First demos in 4 weeks.
+
+Conformal
+Creating Change.
+Without Distortion.
+
+Pre–read
+
+EXECUTIVE SUMMARY
+
+From diagnostic to deployed AI
+THESIS
+
+Partner with SFS to design and deploy AI across value chain – from a CEO decision cockpit to vernacular
+farmer–facing agents – through a unified platform of AI Copilots, Autopilots, and Console that operates them.
+DIAGNOSTIC
+
+Project Leap surfaced 215 use cases across 12 solutions; 12 hero priorities for Wave 1 (0–12 months) – spanning
+farmer engagement, channel-partner workflows, manufacturing, R&D, andan enterprise CEO cockpit. SFS sits at
+digital maturity of 2.1/5 today (integration 1.4, analytics 1.0); foundation needs to be built in parallel with use cases.
+APPROACH
+
+Conformal embeds with SFS teams to build, ship, and operate use cases – Three layers of AI tech (Copilots,
+Autopilots, Conformal Console) delivered through a Diagnose & Design → Build & Run → Drive & Expand lifecycle,
+with forward–deployed engineering on the ground.
+OUTCOME
+
+Decision velocity for executives. Productivity uplift for field, channel partner, and farmer–facing teams.
+Vernacular engagement at scale. Margin and working capital gains across procurement, manufacturing, and finance
+– quantified by Bain at INR 50–80 Cr topline (field force) and INR 10–15 Cr savings (procurement) within 2 years.
+TEAM
+
+Builder leadership combining enterprise AI scale (Amazon, Crescendo), large–scale operating transformation
+(BCG), and India SME capital experience (Accel). BITS Pilani · Wharton.
+
+Conformal
+
+LEARNINGS
+
+Data foundation gates every function
+AI POWERED INSIGHTS AND ANALYTICS
+Natural language powered analysis – from trends to detailed line-level drill–downs
+Generate leadership buy–in; Create data discipline for faster execution of downstream use cases
+
+SALES & MKTG.
+
+PROCUREMENT
+
+R&D
+
+MFG.
+
+Adoption is the
+bottleneck
+Internal users
+(TBMs) ship in
+months; channel
+partners and
+farmers in years
+
+Mix of build and
+buy
+Ariba covers
+transactional flows
+AI layer (vendor
+scoring,
+negotiation prep,
+should-cost) is
+where the moat is
+built
+
+Productivity gains
+land early
+NPD impact takes
+2–3 years given
+research cycles
+Knowledge
+management and
+trial copilots ship
+in months
+Generative trait
+design is
+multi-year
+
+Hardware-gated
+Sensor installation
+precedes software
+value
+Plant performance
+dashboards and
+SAP QC adoption
+are natural Wave 1
+entries
+Deeper MES is
+multi-quarter
+
+(50-60% adoption per
+Growth Book /
+ByteEdge benchmark)
+
+Sequence Wave 1
+around internal
+users
+
+LOGISTICS &
+WAREHOUSING
+
+SUPPORT
+FUNCTIONS
+
+Buy & customize
+TMS solutions
+(Freight Tiger,
+Project44, Fynd)
+deliver 90% of
+value out-of-box
+Don't build what
+you can configure
+SFS-specific
+analytics on top
+
+Buy full suite for
+HR / Finance core
+(Darwinbox, Vena,
+Zoho)
+Build only the AI
+intent layer that
+connects to
+enterprise data –
+that lives inside
+the Enterprise
+solution
+
+DATA SYSTEMS + DATA STORES
+Foundation gates everything. SFS today: Integration 1.4/5, analytics 1.0/5 (Bain DMA)
+Wave 1 must address data plumbing in parallel – agents are only as good as the data they query
+
+Conformal
+
+AI TRANSFORMATION PLATFORM
+
+One platform. Three AI Products: Copilots,
+Autopilots, and Conformal Console
+CONFORMAL AI COPILOTS
+
+CONFORMAL AI AUTOPILOTS
+
+USER FACING AI THAT AUGMENTS JUDGEMENT IN
+REAL–TIME
+
+AGENTIC WORKFLOW THAT RUNS END–TO–END WITHOUT
+HUMAN–IN–THE–LOOP
+
+Decision Authority: Human stays in the driver's seat; AI
+accelerates the work
+
+Decision Authority: Agent decides and acts; Humans
+review exceptions
+
+Best for: Knowledge work and field judgement – CEO
+Cockpit, TBM Voice Assistant, R&D, Variance Analysis
+
+Best for: Bulk reconciliations, farmer campaigns, channel
+& field sales workflows, freight, exception monitoring
+
+Surface: Chat, voice, UI panels embedded in existing and
+new apps
+
+Surface: API and system integrations; runs in the
+background
+
+CONFORMAL CONSOLE
+Performance · Cost · Accuracy · Drift · Escalations · Approvals · Access controls · Usage & ROI by use case
+
+Built and delivered by Conformal forward–deployed engineering teams
+Conformal
+
+USE CASES
+
+The full opportunity: 215 AI use cases, 12 solutions
+AI POWERED INSIGHTS AND ANALYTICS
+Enterprise (CEO Chatbot) · 1 cross-functional decision cockpit · Wave 1A priority
+SALES & MKTG.
+
+PROCUREMENT
+
+84 use cases
+
+~20 use cases
+
+Vernacular farmer
+chatbot
+TBM voice assistant
+(Saathi)
+CP single-point app
+Unified farmer
+database
+AI sales coaching for
+MGOs
+
+AI vendor
+identification
+Vendor credit check
+Real-time import
+data analysis
+Should-cost
+modelling
+Negotiation prep
+agent
+
+LOGISTICS &
+WAREHOUSING
+
+~20 use cases
+Freight price
+discovery
+Optimal route reco
+Real-time
+consignment
+monitoring
+Ocean freight
+tracking
+E-Proof of Delivery
+
+MANUFACTURING
+
+R&D
+
+15 use cases
+
+31 use cases
+
+Plant performance
+dashboard
+Energy & RM cost
+optimization
+Digital QM
+(LIMS-led)
+SAP QC adoption
+Sensor-backed MES
+
+AI parent selection
+(genotype)
+Lab & project
+management
+AI trial design agent
+Trial result analysis
+Generative trait design
+
+SUPPORT
+FUNCTIONS
+
+44 use cases
+Self-service HR
+chatbot
+Knowledge platform
+Variance Analysis
+Co-Pilot
+Customized FP&A
+reporting
+Vendor onboarding
+automation
+
+DATA SYSTEMS + DATA STORES
+SAP · Salesforce · Growth Book · ByteEdge · Mandi & weather feeds · IoT · Soil data · …
+LEGEND
+
+Conformal
+
+WAVE 1A PRIORITY
+
+REQUIRES FURTHER DIAGNOSIS
+
+Source: Project Leap report, Mar 2026 (Bain AI and Digital Trasnformation Strategy)
+Note: Link to Notion database – use cases categorized by function, product, tentative timeline, impact & feasibility
+
+REQUIRES FURTHER DIAGNOSIS
+
+PRIORITY USE CASES – WAVE 1 (PRELIMINARY)
+
+12 priorities for first 12 months as per Project Leap
+ENTERPRISE
+
+FIELD FORCE
+
+CHANNEL
+
+FARMER
+
+Cross-functional
+decision cockpit
+
+TBM voice assistant
+(Saathi)
+
+Single-point CP-facing
+app
+
+Vernacular farmer
+chatbot
+
+Leadership wedge; sets data
+discipline
+
+INR 50-80Cr topline; 20-25% CP
+coverage
+
+Foundation for 15-20% dealer
+NPS lift
+
+Gateway to 10-15% farmer NPS
+lift
+
+0-3m
+
+6-12m
+
+0-6m
+
+0-6m
+
+MARKETING
+
+PROCUREMENT
+
+LOGISTICS
+
+MANUFACTURING
+
+Unified farmer
+database
+
+AI vendor identification
+
+Freight price discovery
++ TMS
+
+Plant performance
+dashboard
+
+INR 1-2Cr savings;
+buy-and-customize
+
+Foundational; gateway to MES &
+SAP QC
+
+Pre-req for personalization; INR
+3-4Cr
+
+INR 10-15Cr savings;
+Ariba-ready
+
+0-6m
+
+0-6m
+
+0-6m
+
+0-6m
+
+R&D
+
+PRODUCT EVAL
+
+HR
+
+FINANCE
+
+AI parent selection
+(genotype)
+
+AI-led trial result
+analysis
+
+Self-service chatbot
+(SAP-integrated)
+
+Variance Analysis
+Co-Pilot
+
+40-50% breeding cycle time
+reduction
+
+20-30% productivity uplift on PE
+
+Built within Enterprise; quick
+adoption
+
+Internal eﬃciency; CFO quick
+win
+
+0-6m
+
+Conformal
+
+6-12m
+
+6-12m
+
+0-6m
+
+Source: Project Leap report, Mar 2026 (Bain AI and Digital Transformation Strategy)
+Note: Link to Notion database – use cases categorized by function, product, tentative timeline, impact & feasibility
+
+DEMO – ENTERPRISE COCKPIT (CEO CHATBOT)
+
+Ask a question. The whole enterprise answers.
+FEATURE HIGHLIGHTS
+Cross-functional context
+Unified knowledge base across Sales, Mfg,
+Procurement, Finance, R&D, …
+
+Natural language queries
+Ask in English or Hindi; structured answers with
+sources and chain of thought tracking
+
+Real-time signal aggregation
+Performance, anomaly, and exception alerts
+surfaced proactively
+
+Drill-down to source
+From summary → underlying transaction or
+system of record
+
+Voice + text input
+Optimized for executive on-the-go usage
+
+Enterprise integration
+SAP · Salesforce · Growth Book · data warehouse
+
+Audit trail & access controls
+Role-based permissions; full query log retained
+
+Conformal
+
+Saved analysis and reports
+Analyses once created can be saved as
+reports for recurring use cases
+AI TOOLS CAN NOW REPLACE
+LEGACY BI TOOLS
+
+Agentic AI Agent Set 1
+Interprets natural language based user
+query
+Plans analyses and identifies relevant
+data sources
+Builds SQL queries to extract relevant
+data
+
+Agentic AI Agent Set 2
+Derives insights from extract data and
+user query + intent
+Creates relevant visualizations and
+charts to present information
+
+Conformal
+
+TRANSFORMATION APPROACH
+
+Diagnose. Build. Drive. Embedded with you.
+PHASE 1
+
+PHASE 2
+
+PHASE 3
+
+DIAGNOSE & DESIGN
+
+BUILD & RUN
+
+DRIVE ADOPTION & EXPAND
+
+DURATION
+
+DURATION
+
+DURATION
+
+4–8 weeks
+
+12–24 weeks per Wave
+
+Ongoing
+
+Frame the opportunity, prioritize,
+architect the solution.
+
+Embed with SFS teams. Ship working
+software, not documents and slides.
+
+Operate, evolve, and expand the
+platform.
+
+KEY ACTIVITIES
+
+KEY ACTIVITIES
+
+KEY ACTIVITIES
+
+· Use case prioritization workshop
+· Data audit & integration scoping
+· Solution architecture & roadmap
+· Wave 1 sprint plan
+
+· Forward-deployed engineering
+· Agile builds in 2-week sprints
+· User co-design with SFS teams
+· Pilot → production handoﬀ
+
+· Change management & training
+· 24×7 operations & SLAs
+· Knowledge transfer to SFS IT
+· Wave 2 / Wave 3 expansion
+
+DELIVERABLE
+
+DELIVERABLE
+
+DELIVERABLE
+
+Transformation execution roadmap +
+Wave 1 SOW
+
+Live use cases with measured early
+impact + ROI study plan
+
+Value realization. Sustained ops +
+roadmap to next wave
+
+Conformal
+
+NEXT STEPS
+
+Eight weeks from alignment to first builds
+1
+
+Week 0–1
+
+2
+
+Week 2–3
+
+3
+
+Week 4
+
+4
+
+Week 5–6
+
+5
+
+Week 8
+
+Conformal
+
+Workshop alignment – follow-up meeting
+Confirm scope, stakeholders, and data access. Sign mutual NDA and align on Wave 1 success
+criteria.
+
+Diagnostic workshops
+Joint working session with SFS leadership across functions. Validate Project Leap priorities;
+surface dependencies.
+
+Wave 1 prioritization
+Ranked use case list with business case (impact, feasibility, sequencing). Joint sign-oﬀ on
+top 5–6 to scope first.
+
+Pilot scoping & SOW
+Detailed scope, architecture, and success metrics for first 2 use cases. Commercial construct
++ delivery plan.
+
+Pilot kickoﬀ
+Begin Build & Run for first wave. Forward-deployed team embeds with SFS counterparts.
+First demos in 4 weeks.
+
+

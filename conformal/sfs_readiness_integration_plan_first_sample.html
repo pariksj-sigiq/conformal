@@ -1,0 +1,1491 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SFS Readiness and Integration Plan</title>
+  <style>
+    :root {
+      --bg: #f7f7f5;
+      --surface: #ffffff;
+      --surface-2: #f0f0ed;
+      --ink: #121316;
+      --muted: #6d7179;
+      --muted-2: #8d9097;
+      --line: #dedfdc;
+      --line-strong: #c7c8c4;
+      --red: #b8232e;
+      --red-soft: #fbebed;
+      --green: #177245;
+      --green-soft: #e8f4ee;
+      --amber: #9a650f;
+      --amber-soft: #fbf1de;
+      --blue: #23618a;
+      --blue-soft: #e9f3f8;
+      --violet: #6652a9;
+      --violet-soft: #f0edf8;
+      --shadow: 0 22px 60px rgba(18, 19, 22, 0.08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(18, 19, 22, 0.035) 1px, transparent 1px) 0 0 / 72px 72px,
+        linear-gradient(0deg, rgba(18, 19, 22, 0.03) 1px, transparent 1px) 0 0 / 72px 72px,
+        var(--bg);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .shell {
+      width: min(100%, 1480px);
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: -18px -18px 18px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(247, 247, 245, 0.9);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mark {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 9px;
+      background: var(--ink);
+      color: #fff;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 22px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .button {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 0 14px;
+      font-size: 13px;
+      font-weight: 720;
+      transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+    }
+
+    .button:hover {
+      border-color: var(--line-strong);
+      transform: translateY(-1px);
+    }
+
+    .button.primary {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 420px;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .hero-main,
+    .hero-side,
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero-main {
+      padding: 34px;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--red);
+      font-size: 12px;
+      font-weight: 820;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .hero h2 {
+      max-width: 860px;
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 52px;
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .hero-copy {
+      max-width: 760px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.55;
+    }
+
+    .note {
+      margin-top: 24px;
+      padding: 14px 16px;
+      border-left: 4px solid var(--red);
+      background: var(--red-soft);
+      color: #6b242a;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .hero-side {
+      display: grid;
+      background: #15161a;
+      color: #fff;
+    }
+
+    .side-inner {
+      padding: 24px;
+    }
+
+    .side-label {
+      margin: 0 0 16px;
+      color: rgba(255, 255, 255, 0.62);
+      font-size: 12px;
+      font-weight: 820;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .metric-list {
+      display: grid;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .metric-list li {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 14px;
+      align-items: baseline;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .metric-list li:first-child {
+      padding-top: 0;
+    }
+
+    .metric-list li:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .metric-number {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 37px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .metric-text {
+      color: rgba(255, 255, 255, 0.76);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .section {
+      margin-bottom: 18px;
+    }
+
+    .panel-head {
+      padding: 18px 20px 0;
+    }
+
+    .panel-head h3 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .panel-head p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .panel-body {
+      padding: 18px 20px 20px;
+    }
+
+    .source-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      border-left: 1px solid var(--line);
+      border-top: 1px solid var(--line);
+    }
+
+    .source-cell {
+      min-width: 0;
+      padding: 14px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: #fbfbfa;
+    }
+
+    .source-cell h4 {
+      min-height: 34px;
+      margin: 0 0 10px;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .triple {
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .triple span {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+    }
+
+    .triple b {
+      color: var(--ink);
+    }
+
+    .read {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .spine {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .spine-step {
+      position: relative;
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfbfa;
+    }
+
+    .spine-step::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -11px;
+      width: 10px;
+      height: 1px;
+      background: var(--line-strong);
+    }
+
+    .spine-step:last-child::after {
+      display: none;
+    }
+
+    .step-num {
+      display: inline-grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      background: var(--ink);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 820;
+    }
+
+    .spine-step h4 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .spine-step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) 210px 210px;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .input,
+    .select {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 0 12px;
+      font-size: 14px;
+    }
+
+    .workbench {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(330px, 0.9fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .case-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .case-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 142px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfbfa;
+      color: var(--ink);
+      text-align: left;
+      transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+    }
+
+    .case-row:hover,
+    .case-row.active {
+      background: var(--surface);
+      border-color: rgba(184, 35, 46, 0.42);
+      transform: translateY(-1px);
+    }
+
+    .case-kicker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 780;
+      white-space: nowrap;
+    }
+
+    .badge.easy {
+      border-color: rgba(23, 114, 69, 0.3);
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .badge.pilot {
+      border-color: rgba(35, 97, 138, 0.3);
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .badge.moderate {
+      border-color: rgba(154, 101, 15, 0.35);
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .badge.external {
+      border-color: rgba(102, 82, 169, 0.3);
+      background: var(--violet-soft);
+      color: var(--violet);
+    }
+
+    .badge.workshop {
+      border-color: rgba(184, 35, 46, 0.3);
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .badge.assumption {
+      border-color: rgba(18, 19, 22, 0.28);
+      background: #eeeeea;
+      color: var(--ink);
+    }
+
+    .case-title {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.3;
+    }
+
+    .case-sub {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .bar-wrap {
+      display: grid;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .bar {
+      height: 9px;
+      display: flex;
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      background: #ececea;
+    }
+
+    .seg.available {
+      background: var(--green);
+    }
+
+    .seg.partial {
+      background: var(--amber);
+    }
+
+    .seg.unavailable {
+      background: var(--red);
+    }
+
+    .counts {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .detail {
+      position: sticky;
+      top: 84px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .detail-body {
+      padding: 20px;
+    }
+
+    .detail h3 {
+      margin: 10px 0 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 34px;
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .detail p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border-left: 1px solid var(--line);
+      border-top: 1px solid var(--line);
+      margin: 16px 0;
+    }
+
+    .mini-stat {
+      padding: 12px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: #fbfbfa;
+    }
+
+    .mini-stat b {
+      display: block;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    .mini-stat span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.25;
+    }
+
+    .info-block {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .info-block h4 {
+      margin: 0 0 8px;
+      color: var(--muted-2);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .info-block ul {
+      display: grid;
+      gap: 7px;
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .ask-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: ask;
+    }
+
+    .ask-list li {
+      position: relative;
+      min-height: 42px;
+      padding: 11px 12px 11px 46px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfbfa;
+      color: var(--ink);
+      font-size: 13px;
+      line-height: 1.35;
+      counter-increment: ask;
+    }
+
+    .ask-list li::before {
+      content: counter(ask);
+      position: absolute;
+      left: 12px;
+      top: 10px;
+      width: 23px;
+      height: 23px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      background: var(--ink);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 820;
+    }
+
+    .copy {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfbfa;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .copy b {
+      color: var(--ink);
+    }
+
+    .table-scroll {
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfbfa;
+    }
+
+    .data-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .data-table th {
+      color: var(--muted-2);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      background: #f2f2ef;
+    }
+
+    .data-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .anchor-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .anchor-card {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfbfa;
+    }
+
+    .anchor-card b {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .anchor-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .stakeholder-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .stakeholder {
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: #fbfbfa;
+    }
+
+    .stakeholder h4 {
+      margin: 0 0 7px;
+      font-size: 13px;
+    }
+
+    .stakeholder p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.42;
+    }
+
+    .empty {
+      padding: 18px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 12px;
+      color: var(--muted);
+      background: #fbfbfa;
+      font-size: 14px;
+    }
+
+    @media (max-width: 1080px) {
+      .hero,
+      .workbench,
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+
+      .detail {
+        position: static;
+      }
+
+      .source-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .spine {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .spine-step::after {
+        display: none;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .shell {
+        padding: 12px;
+      }
+
+      .topbar {
+        margin: -12px -12px 12px;
+        padding: 12px;
+      }
+
+      .brand p,
+      .top-actions {
+        display: none;
+      }
+
+      .hero-main {
+        padding: 22px;
+      }
+
+      .hero h2 {
+        font-size: 31px;
+        line-height: 1.08;
+      }
+
+      .metric-list li {
+        grid-template-columns: 78px minmax(0, 1fr);
+      }
+
+      .source-grid,
+      .spine,
+      .anchor-grid,
+      .controls,
+      .case-row,
+      .stakeholder-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .detail h3 {
+        font-size: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">C</div>
+        <div>
+          <h1>SFS Readiness and Integration Plan</h1>
+          <p>First sample view from Sidd's full data-field hypothesis</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="button" data-scroll="integration">Integration path</button>
+        <button class="button" data-scroll="workbench">Use cases</button>
+        <button class="button primary" data-scroll="asks">SFS asks</button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-main">
+        <p class="eyebrow">From use-case sheet to integration plan</p>
+        <h2>Most missing fields are not blockers. They are computable, sourced, or workflow dependent.</h2>
+        <p class="hero-copy">This view translates the SFS use-case document and Sidd's field database into a practical delivery map: what can move quickly into a columnar store, what needs integration or definitions, and what needs SFS workshops before we promise production.</p>
+        <div class="note"><b>Important caveat:</b> this is not confirmed SFS source inventory yet. It is our structured hypothesis from the document and mentioned systems. The next step is validation with SAP, Growthbook/Saathi, Ariba, scheme, logistics, and security owners.</div>
+      </div>
+      <aside class="hero-side">
+        <div class="side-inner">
+          <p class="side-label">Current data-field read</p>
+          <ul class="metric-list">
+            <li><span class="metric-number">146</span><span class="metric-text">Fields mapped in the full DB export.</span></li>
+            <li><span class="metric-number">94</span><span class="metric-text">Unavailable headline count. This is not the real blocker count.</span></li>
+            <li><span class="metric-number">58</span><span class="metric-text">Unavailable computed fields Conformal can build after base data lands.</span></li>
+            <li><span class="metric-number">27</span><span class="metric-text">Externally sourced fields needing providers or legal/commercial approval.</span></li>
+            <li><span class="metric-number">15+5</span><span class="metric-text">15 build use cases field-mapped; logistics is tracked separately as vendor fit-gap.</span></li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+
+    <section class="panel section">
+      <div class="panel-head">
+        <h3>What the numbers actually mean</h3>
+        <p>Unavailable is not one bucket. The key SFS message is: give us read access and source owners; a large share of the gap is built inside the Conformal semantic layer.</p>
+      </div>
+      <div class="panel-body">
+        <div class="source-grid" id="sourceGrid"></div>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="panel-head">
+        <h3>What this map intentionally excludes</h3>
+        <p>The 146-field database maps 15 build use cases: procurement, field force, and enterprise assistant. It does not field-map the 5 logistics use cases or the infrastructure foundation.</p>
+      </div>
+      <div class="panel-body">
+        <div class="copy">
+          <div><b>Logistics is separate by design:</b> Freight Discovery, Route Optimization, E-PoD, Consignment Monitoring, and Ocean Freight should be handled as a TMS/vendor-selection and integration track.</div>
+          <div><b>How to say it to SFS:</b> "We field-mapped the 15 custom build use cases. Logistics is not missing from our analysis; it is deliberately treated as buy-and-customize, where the work is vendor fit-gap, SAP/TMS integration, and analytics on top."</div>
+          <div><b>Infrastructure is also separate:</b> the platform foundation is not a business data field map; it is the shared layer that makes every mapped use case production-safe.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="panel-head">
+        <h3>SFS source-numbering crosswalk</h3>
+        <p>Use these SFS labels in the meeting. Our original analysis numbers are kept only for traceability.</p>
+      </div>
+      <div class="panel-body">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Our prior label</th>
+                <th>SFS cluster</th>
+                <th>SFS no.</th>
+                <th>SFS source label</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1. Historical Spend Analysis &amp; Price Insights</td><td>Procurement</td><td>1</td><td>Historical Spend Analysis &amp; Price Insights</td></tr>
+              <tr><td>2. Real-Time Import Data Analysis</td><td>Procurement</td><td>2</td><td>Real-Time Import Data Analysis</td></tr>
+              <tr><td>3. AI-Driven Preparation Material for Negotiations</td><td>Procurement</td><td>3</td><td>AI-Driven Preparation Material for Negotiations</td></tr>
+              <tr><td>5. AI-Led Vendor Identification &amp; Recommendation</td><td>Procurement</td><td>4</td><td>AI-Led Vendor Identification &amp; Recommendation</td></tr>
+              <tr><td>4. Vendor Creditworthiness &amp; Fraud Check</td><td>Procurement</td><td>5</td><td>Vendor Creditworthiness &amp; Fraud Check</td></tr>
+              <tr><td>6. Should-Cost Modelling &amp; Analysis</td><td>Procurement</td><td>6</td><td>AI-Driven Should-Cost Analysis (across the top 5-10 products)</td></tr>
+              <tr><td>7. Field Performance Dashboard</td><td>Field Force + Salesforce</td><td>1</td><td>Field Performance Tracking Dashboard</td></tr>
+              <tr><td>9. Activity Analytics</td><td>Field Force + Salesforce</td><td>2</td><td>Activity Analytics (Growthbook + SAP)</td></tr>
+              <tr><td>10. Scheme Chatbot</td><td>Field Force + Salesforce</td><td>3</td><td>Pricing, Policy &amp; Scheme Dissemination Chatbot</td></tr>
+              <tr><td>8. Dealer Profiles (Saathi)</td><td>Field Force + Salesforce</td><td>4</td><td>Dealer Profiles &amp; Field-Visit Conversation Inputs (Saathi app)</td></tr>
+              <tr><td>11. AI Sales Coaching</td><td>Field Force + Salesforce</td><td>5</td><td>AI-Enabled Sales Coaching</td></tr>
+              <tr><td>12. Unified Product &amp; Partner-Level Visibility</td><td>Field Force + Salesforce</td><td>6</td><td>Unified Product &amp; Partner-Level Visibility</td></tr>
+              <tr><td>14. Warehouse Stock Visibility</td><td>Field Force + Salesforce</td><td>7</td><td>Real-Time Warehouse Stock Visibility</td></tr>
+              <tr><td>13. Early Warning for Sales Performance &amp; Dealer Churn Risk</td><td>Field Force + Salesforce</td><td>8</td><td>Early Warning for Sales Performance &amp; Dealer Churn Risk</td></tr>
+              <tr><td>Enterprise Chat Assistant (Supply &amp; Sales)</td><td>Enterprise Assistant</td><td>1</td><td>Enterprise Chat Assistant (Supply &amp; Sales)</td></tr>
+              <tr><td>Not field-mapped</td><td>Logistics - Buy and Customize</td><td>1-5</td><td>Freight Discovery, Route Optimization, E-PoD, Consignment Monitoring, Ocean Freight</td></tr>
+              <tr><td>Not a business field map</td><td>Technology &amp; Infrastructure Setup</td><td>1</td><td>Technology and Infrastructure set-up</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel section" id="integration">
+      <div class="panel-head">
+        <h3>Integration path into a columnar AI store</h3>
+        <p>The clean path is to avoid direct agent access to source systems. Land read-only extracts from SAP BW / Power BI and internal apps, standardize them, create gold marts, then expose governed semantic views to agents.</p>
+      </div>
+      <div class="panel-body">
+        <div class="spine">
+          <div class="spine-step"><span class="step-num">1</span><h4>SFS source systems</h4><p>SAP BW/Power BI, SAP SD/MM/FI, Growthbook, Saathi, Ariba, Concur, Complinity, schemes, logistics, external data.</p></div>
+          <div class="spine-step"><span class="step-num">2</span><h4>Raw landing</h4><p>Read-only batch/API/SFTP extracts stored exactly as received with source and run metadata.</p></div>
+          <div class="spine-step"><span class="step-num">3</span><h4>Columnar standard layer</h4><p>Typed Parquet/Delta tables, ID crosswalks, quality checks, refresh timestamps.</p></div>
+          <div class="spine-step"><span class="step-num">4</span><h4>Gold semantic marts</h4><p>Dealer 360, field performance, spend cube, stock visibility, enterprise KPIs.</p></div>
+          <div class="spine-step"><span class="step-num">5</span><h4>AI agent tools</h4><p>SQL over governed views, retrieval over docs, charting, report generation, audit logs.</p></div>
+          <div class="spine-step"><span class="step-num">6</span><h4>SFS apps</h4><p>Leadership cockpit, field-force assistant, procurement copilot, alerts and exports.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="panel-head">
+        <h3>Cross-cutting net-new capture dependency</h3>
+        <p>SFS states secondary sales, inventory liquidation, and PoG trackers are not collected consistently. That does not block descriptive dashboards, but it blocks the smarter liquidation and channel-stock layer.</p>
+      </div>
+      <div class="panel-body">
+        <div class="copy">
+          <div><b>Dependency:</b> secondary sales / inventory liquidation / PoG capture.</div>
+          <div><b>Affected use cases:</b> Field Force #1 Field Performance, Field Force #2 Activity Analytics, Field Force #6 Product &amp; Partner Visibility, and Channel Stock Estimate fields.</div>
+          <div><b>Honest caveat:</b> the descriptive base is fast if SAP and Growthbook data lands; liquidation completeness and PoG-led intelligence need a new SFS capture workflow or distributor/dealer reporting process.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="panel-head">
+        <h3>SFS ROI and effort anchors</h3>
+        <p>The data-readiness result converges with SFS's own impact and effort lines. This is why Wave 1 should be ROI-aligned, not just technically convenient.</p>
+      </div>
+      <div class="panel-body">
+        <div class="anchor-grid">
+          <div class="anchor-card"><b>Field Force</b><span>SFS estimates INR 50-80 Cr incremental revenue and an 8-month build. Field Performance is also our fastest data start, so it should anchor Wave 1.</span></div>
+          <div class="anchor-card"><b>Enterprise Assistant</b><span>SFS marks it as the shortest 4-month build. We already have the strongest pilot surface if scoped to confirmed SAP BW / Power BI metrics.</span></div>
+          <div class="anchor-card"><b>Procurement</b><span>SFS estimates INR 10-15 Cr savings. Historical Spend can enter early discovery because the SAP purchase-register base is strong.</span></div>
+          <div class="anchor-card"><b>Logistics</b><span>SFS's low custom-build estimate supports buy-and-customize. Keep it as vendor/TMS fit-gap, not a custom agent build.</span></div>
+        </div>
+        <div class="note"><b>Recommended Wave 1:</b> platform foundation + Enterprise Assistant + Field Force #1 Field Performance, with Field Force #4 Dealer Profiles as the field-facing companion and Procurement #1 Historical Spend in discovery.</div>
+      </div>
+    </section>
+
+    <section class="panel section" id="workbench">
+      <div class="panel-head">
+        <h3>Use-case readiness workbench</h3>
+        <p>Start with the easy and strong-pilot candidates. Keep external-data and new-capture use cases in discovery until SFS validates owners, providers, and workflows.</p>
+      </div>
+      <div class="panel-body">
+        <div class="controls">
+          <input class="input" id="search" type="search" placeholder="Search use case, source, ask" />
+          <select class="select" id="tierFilter">
+            <option value="all">All readiness tiers</option>
+            <option value="easy">Fast start / descriptive base</option>
+            <option value="pilot">Strong pilot / definition work</option>
+            <option value="moderate">Moderate integration work</option>
+            <option value="external">Tier 2.5 / external-data + definition</option>
+            <option value="workshop">Workshop-heavy</option>
+            <option value="assumption">Assumption-only</option>
+          </select>
+          <select class="select" id="themeFilter">
+            <option value="all">All themes</option>
+            <option value="Enterprise">Enterprise</option>
+            <option value="Field Force">Field Force</option>
+            <option value="Procurement">Procurement</option>
+          </select>
+        </div>
+
+        <div class="workbench">
+          <div>
+            <div class="case-list" id="caseList"></div>
+          </div>
+          <aside class="detail" id="caseDetail"></aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel section" id="asks">
+      <div class="panel-head">
+        <h3>What to ask SFS next</h3>
+        <p>The goal of the first technical working session is not production integration. It is enough source truth to classify use cases as extraction-led, integration-led, or workshop-heavy.</p>
+      </div>
+      <div class="panel-body">
+        <div class="two-col">
+          <div>
+            <ol class="ask-list">
+              <li>Confirm source owners for SAP SD, SAP MM, SAP FI/CO, stock/inventory, Growthbook, Saathi, Ariba, schemes, logistics, and Azure/security.</li>
+              <li>Share masked sample extracts first: SAP purchase register, sales/billing, collections, dealer master, product master, vendor master, targets, field activity, stock snapshots.</li>
+              <li>Confirm read-only extract access off the existing SAP BW / Power BI layer, including refresh frequency and preserved join keys.</li>
+              <li>Confirm join keys: dealer ID, material code, vendor ID, employee ID, territory, plant, warehouse, HSN.</li>
+              <li>Confirm which "unavailable" fields are computable metrics versus external feeds versus new workflow capture.</li>
+              <li>Pick 2-3 real-data slices for the first columnar store POC.</li>
+            </ol>
+          </div>
+          <div class="copy">
+            <div><b>What we should say:</b> We have mapped the use cases into the data fields needed to power them. Now we want to validate the source systems and integration paths with your team.</div>
+            <div><b>What we are not asking for yet:</b> full production credentials, ERP changes, or a large integration program on day one.</div>
+            <div><b>What we are asking for:</b> source owners, masked extracts, schemas, refresh expectations, and workshops where the data does not exist yet.</div>
+            <div><b>Best wedge:</b> start with SAP BW / Power BI and internal-app use cases, build a governed columnar layer, then expand into EXIM, MCA/GST, credit, and logistics providers.</div>
+          </div>
+        </div>
+        <div class="stakeholder-grid">
+          <div class="stakeholder"><h4>Amit / executive sponsor</h4><p>Nominate owners and approve the 2-week discovery sprint. Blocked until present: all use cases.</p></div>
+          <div class="stakeholder"><h4>SFS IT lead</h4><p>Confirm access pattern and target environment. Blocked: all production integrations.</p></div>
+          <div class="stakeholder"><h4>SAP Basis / integration</h4><p>Confirm read-only extract access off SAP BW / Power BI. Blocked: enterprise, field, procurement and stock marts.</p></div>
+          <div class="stakeholder"><h4>SAP SD owner</h4><p>Sales, billing, dealer master, pricing conditions and scheme linkage. Blocked: Field #1, #3, #4, #6, #8 and Enterprise.</p></div>
+          <div class="stakeholder"><h4>SAP MM owner</h4><p>PO-line extract, vendor master, material master, stock and inventory data. Blocked: Procurement #1, #3, #4, #6 and Field #7.</p></div>
+          <div class="stakeholder"><h4>Finance FI/CO owner</h4><p>Collections, receivables, P&amp;L, budgets and official metric definitions. Blocked: Enterprise, Field #1 and Field #8.</p></div>
+          <div class="stakeholder"><h4>Master Data / Data Governance</h4><p>Own product hierarchy plus dealer, vendor, employee and HSN crosswalks. Blocked: Product/Partner Visibility, Enterprise cross-BU, Spend, EXIM and Vendor ID.</p></div>
+          <div class="stakeholder"><h4>Growthbook / Saathi owner</h4><p>Event schema, 12-month export, dealer/employee ID mapping and voice/note capture status. Blocked: Field #1, #2, #4, #5 and #8.</p></div>
+          <div class="stakeholder"><h4>Sales ops / field excellence</h4><p>Validate field hierarchy, targets, visit outcomes and secondary-sales/PoG capture gaps. Blocked: Field #1, #2, #4, #5, #6 and #8.</p></div>
+          <div class="stakeholder"><h4>Scheme / pricing owner</h4><p>Circular repository, active schemes, eligibility rules and SAP pricing-condition link. Blocked: Field #3 and Enterprise scheme answers.</p></div>
+          <div class="stakeholder"><h4>Procurement category managers</h4><p>Spend taxonomy, BPV rules, should-cost assumptions and priority commodities. Blocked: Procurement #1, #3, #4 and #6.</p></div>
+          <div class="stakeholder"><h4>Ariba owner</h4><p>Confirm RFQ, supplier onboarding, contract exports/APIs and supplier ID mapping. Blocked: Procurement #3, #4 and #5.</p></div>
+          <div class="stakeholder"><h4>External-data contracting</h4><p>Select or contract EXIM, commodity, GST/GSP, MCA21, credit and litigation providers. Blocked: Procurement #2, #3, #5 and #6.</p></div>
+          <div class="stakeholder"><h4>Legal / compliance</h4><p>Approve external risk data plus dealer voice capture, call recording and classification. Blocked: Procurement #5, Field #4 and Field #5.</p></div>
+          <div class="stakeholder"><h4>Complinity / Concur owner</h4><p>Provide vendor-license and SG&amp;A/T&amp;E exports plus ID mapping. Blocked: Procurement #1 and Field Performance expense views.</p></div>
+          <div class="stakeholder"><h4>Logistics owner</h4><p>Run vendor fit-gap separately: TMS shortlist, lane/rate data, shipment/POD examples. Blocked: all logistics use cases.</p></div>
+          <div class="stakeholder"><h4>Azure / security owner</h4><p>Confirm tenant, data residency, SSO, audit logs and approved model gateway. Blocked: all production agents.</p></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const sourceGroups = [
+      { name: "SAP", available: 30, partial: 8, unavailable: 2, read: "Strongest base. Confirm read-only extract access off existing SAP BW / Power BI." },
+      { name: "Internal Apps", available: 3, partial: 9, unavailable: 7, read: "Growthbook, Saathi, ByteEdge plus separate Concur and Complinity owners." },
+      { name: "Computed / Derived", available: 0, partial: 0, unavailable: 58, read: "Not SFS blockers. Buildable after base data lands in the semantic layer." },
+      { name: "External Market", available: 0, partial: 0, unavailable: 14, read: "Requires EXIM, commodity, FX, fuel, and benchmark provider decisions." },
+      { name: "External Risk", available: 0, partial: 0, unavailable: 13, read: "Requires GST, MCA, credit, litigation and legal/privacy review." },
+      { name: "Logistics", available: 0, partial: 2, unavailable: 0, read: "Too thin today. Validate actual TMS, shipment, POD and carrier systems." }
+    ];
+
+    const useCases = [
+      {
+        id: "FF1",
+        name: "Field Force #1 - Field Performance Tracking Dashboard",
+        theme: "Field Force",
+        tier: "easy",
+        tierLabel: "Fast start / descriptive base",
+        fields: 20,
+        available: 13,
+        partial: 4,
+        unavailable: 3,
+        source: "SAP BW / Power BI, SAP sales, dealer master, product master, Growthbook, targets",
+        why: "Strongest data start. Fast for the descriptive dashboard; the prescriptive layer still needs outcome definitions and capture.",
+        ask: ["SAP BW / Power BI sales and billing extract", "dealer and product master", "field hierarchy", "Growthbook activity export", "target and incentive files"],
+        build: ["mart_field_performance", "MGO/TBM/RBM drilldowns", "target vs actual", "visit intensity", "collection risk"],
+        caution: "Do not promise all intelligence in week 8. The descriptive base is fast, but liquidation and secondary-sales completeness need new SFS capture."
+      },
+      {
+        id: "FF4",
+        name: "Field Force #4 - Dealer Profiles & Field-Visit Conversation Inputs (Saathi app)",
+        theme: "Field Force",
+        tier: "easy",
+        tierLabel: "Fast start / descriptive base",
+        fields: 20,
+        available: 12,
+        partial: 4,
+        unavailable: 4,
+        source: "SAP dealer master, sales, collections, Saathi, Growthbook",
+        why: "The dealer profile base is strong. Saathi and Growthbook enrich it once IDs are mapped; relationship intelligence still needs capture discipline.",
+        ask: ["dealer master", "sales and collection history", "Saathi app schema", "Growthbook visit export", "current field note and voice-capture format"],
+        build: ["mart_dealer_360", "dealer snapshot", "next best action", "pre-visit briefing"],
+        caution: "The profile can ship early; dealer risk flags, relationship profile and voice capture require workflow and legal validation."
+      },
+      {
+        id: "EA1",
+        name: "Enterprise Assistant #1 - Enterprise Chat Assistant (Supply & Sales)",
+        theme: "Enterprise",
+        tier: "pilot",
+        tierLabel: "Strong pilot / definition work",
+        fields: 18,
+        available: 8,
+        partial: 4,
+        unavailable: 6,
+        source: "SAP BW / Power BI, SAP sales, collections, procurement, targets, Growthbook",
+        why: "Good Wave 1 if scoped to confirmed data. It should query semantic marts, not raw SAP tables.",
+        ask: ["SAP BW / Power BI read-only extract path", "metric dictionary", "sales and collections", "targets", "procurement/spend extract", "review questions and decks"],
+        build: ["mart_enterprise_kpis", "golden question set", "SQL tool", "chart tool", "audit trail"],
+        caution: "Enterprise-wide only after source coverage and metric definitions are validated."
+      },
+      {
+        id: "P1",
+        name: "Procurement #1 - Historical Spend Analysis & Price Insights",
+        theme: "Procurement",
+        tier: "pilot",
+        tierLabel: "Strong pilot / definition work",
+        fields: 26,
+        available: 11,
+        partial: 6,
+        unavailable: 9,
+        source: "SAP purchase register, vendor master, material master, Concur, Complinity",
+        why: "SAP procurement base is strong. Unavailable fields like BPV, variance and anomaly flags are computable after taxonomy work.",
+        ask: ["36 months PO-line extract", "vendor master", "material master", "Concur SG&A/T&E export", "Complinity vendor-license export", "category workshop"],
+        build: ["mart_spend_cube", "BPV leakage", "price variance", "spend anomaly flags"],
+        caution: "Spend taxonomy and strategic classification require business sign-off."
+      },
+      {
+        id: "FF6",
+        name: "Field Force #6 - Unified Product & Partner-Level Visibility",
+        theme: "Field Force",
+        tier: "pilot",
+        tierLabel: "Strong pilot / definition work",
+        fields: 15,
+        available: 8,
+        partial: 2,
+        unavailable: 5,
+        source: "SAP sales, dealer master, material master, Growthbook",
+        why: "Base data is owned by SFS. The main work is product hierarchy, partner scorecard, and cross-BU metric definitions.",
+        ask: ["partner hierarchy", "product hierarchy", "dealer/product sales", "collections", "Growthbook linkage", "secondary-sales and PoG capture status"],
+        build: ["mart_partner_visibility", "partner scorecard", "cross-sell opportunity", "product mix drilldown"],
+        caution: "Descriptive visibility is fast; liquidation, secondary-sales completeness and PoG-led intelligence require new capture."
+      },
+      {
+        id: "FF7",
+        name: "Field Force #7 - Real-Time Warehouse Stock Visibility",
+        theme: "Field Force",
+        tier: "pilot",
+        tierLabel: "Strong pilot / definition work",
+        fields: 18,
+        available: 7,
+        partial: 6,
+        unavailable: 5,
+        source: "SAP stock, material master, dealer master, logistics",
+        why: "Own stock should be accessible from SAP. The harder part is freshness, vendor warehouse feed, in-transit stock and substitution logic.",
+        ask: ["stock snapshot by SKU and location", "warehouse/plant mapping", "ATP/open order logic", "in-transit source", "vendor warehouse process"],
+        build: ["mart_stock_visibility", "stock freshness", "nearby warehouse", "substitute recommendation"],
+        caution: "Do not promise real time until SFS confirms refresh path."
+      },
+      {
+        id: "FF3",
+        name: "Field Force #3 - Pricing, Policy & Scheme Dissemination Chatbot",
+        theme: "Field Force",
+        tier: "moderate",
+        tierLabel: "Moderate integration work",
+        fields: 14,
+        available: 3,
+        partial: 4,
+        unavailable: 7,
+        source: "SAP pricing, scheme documents, Growthbook/Saathi, dealer master",
+        why: "The value is high but scheme rules are likely split across PDFs, pricing masters and informal distribution.",
+        ask: ["scheme circular repository", "SAP pricing conditions", "active scheme list", "dealer tier rules", "approval owner"],
+        build: ["scheme_master", "scheme_rule", "retrieval over circulars", "eligibility answer agent"],
+        caution: "Needs official source of truth for scheme eligibility."
+      },
+      {
+        id: "FF8",
+        name: "Field Force #8 - Early Warning for Sales Performance & Dealer Churn Risk",
+        theme: "Field Force",
+        tier: "moderate",
+        tierLabel: "Moderate integration work",
+        fields: 19,
+        available: 7,
+        partial: 2,
+        unavailable: 10,
+        source: "SAP sales, collections, dealer master, Saathi, Growthbook, GST",
+        why: "Risk scoring is possible, but churn definition, labels, interventions and outcome tracking need workshops.",
+        ask: ["36 months dealer sales", "collections", "visit history", "scheme participation", "churn definition", "intervention process"],
+        build: ["mart_churn_risk", "dealer_churn_label", "intervention tracking", "risk explanation"],
+        caution: "Do not sell as predictive until label quality is validated. BPV Gap is no longer counted against churn."
+      },
+      {
+        id: "P4",
+        name: "Procurement #4 - AI-Led Vendor Identification & Recommendation",
+        theme: "Procurement",
+        tier: "moderate",
+        tierLabel: "Moderate integration work",
+        fields: 23,
+        available: 8,
+        partial: 4,
+        unavailable: 11,
+        source: "SAP vendor master, purchase register, EXIM, MCA/GST, Ariba",
+        why: "Keep in Tier 2 because 12 fields are owned and 5 are sourced; external signals improve it but do not fully block the base.",
+        ask: ["vendor master", "PO/GRN history", "quality/performance records", "Ariba status", "external vendor/risk sources"],
+        build: ["vendor_score", "vendor candidate list", "RFQ recommendation", "risk flags"],
+        caution: "External provider and Ariba readiness decide production depth, not whether a useful base can start."
+      },
+      {
+        id: "P3",
+        name: "Procurement #3 - AI-Driven Preparation Material for Negotiations",
+        theme: "Procurement",
+        tier: "external",
+        tierLabel: "Tier 2.5 / external-data + definition",
+        fields: 21,
+        available: 5,
+        partial: 3,
+        unavailable: 13,
+        source: "SAP purchase history, EXIM, commodity, macro feeds, Ariba",
+        why: "A brief generator is feasible, but real quality needs EXIM/commodity feeds and negotiation outcome capture.",
+        ask: ["purchase history by vendor and commodity", "contract/RFQ history", "EXIM provider", "commodity indices", "buyer workflow"],
+        build: ["negotiation_brief", "recommended target price", "vendor pricing pattern", "outcome log"],
+        caution: "Moved out of normal Tier 2 because the external-data profile matches the heavy-discovery import use case."
+      },
+      {
+        id: "P6",
+        name: "Procurement #6 - AI-Driven Should-Cost Analysis (across the top 5-10 products)",
+        theme: "Procurement",
+        tier: "external",
+        tierLabel: "Tier 2.5 / external-data + definition",
+        fields: 17,
+        available: 4,
+        partial: 2,
+        unavailable: 11,
+        source: "SAP purchase history, material master, EXIM, FX, fuel, labor benchmarks",
+        why: "Needs a category-specific cost model, not just data extraction.",
+        ask: ["top 5-10 materials", "specs/grades", "cost drivers", "UoM conversions", "commodity and macro sources"],
+        build: ["should_cost_model", "cost components", "sensitivity analysis", "actual vs target gap"],
+        caution: "Moved out of normal Tier 2 because it needs external market feeds and category-manager assumptions before output is credible."
+      },
+      {
+        id: "P2",
+        name: "Procurement #2 - Real-Time Import Data Analysis",
+        theme: "Procurement",
+        tier: "workshop",
+        tierLabel: "Workshop-heavy",
+        fields: 16,
+        available: 3,
+        partial: 2,
+        unavailable: 11,
+        source: "EXIM provider, SAP purchase register, material master",
+        why: "Depends on external EXIM licensing, HSN mapping and landed-cost normalization.",
+        ask: ["priority HSN list", "HSN coverage in material master", "EXIM provider decision", "landed cost assumptions"],
+        build: ["hsn_material_map", "raw_exim_transaction", "import benchmark mart"],
+        caution: "Do not call it real time until provider lag is known."
+      },
+      {
+        id: "P5",
+        name: "Procurement #5 - Vendor Creditworthiness & Fraud Check",
+        theme: "Procurement",
+        tier: "workshop",
+        tierLabel: "Workshop-heavy",
+        fields: 18,
+        available: 3,
+        partial: 1,
+        unavailable: 14,
+        source: "SAP vendor master, GST, MCA21, credit bureau, litigation, Complinity",
+        why: "Mostly external risk/compliance data plus entity resolution and legal/privacy approval.",
+        ask: ["GSTIN/PAN/CIN coverage", "blocked vendor list", "credit provider", "MCA/GST access", "Complinity license fields", "legal approval"],
+        build: ["vendor_risk_signal", "beneficial owner graph", "risk tier", "evidence trail"],
+        caution: "High value, but provider/legal dependencies make it discovery-first."
+      },
+      {
+        id: "FF5",
+        name: "Field Force #5 - AI-Enabled Sales Coaching",
+        theme: "Field Force",
+        tier: "workshop",
+        tierLabel: "Workshop-heavy",
+        fields: 18,
+        available: 4,
+        partial: 2,
+        unavailable: 12,
+        source: "Saathi, Growthbook, SAP sales, coaching content, conversation logs",
+        why: "Needs approved content, call classification, voice capture, coaching rubric and feedback process.",
+        ask: ["approved sales playbooks", "ByteEdge/training content", "voice capture plan", "call-recording approval", "quality rubric", "feedback workflow"],
+        build: ["coaching_content_chunk", "conversation quality score", "coaching interaction log"],
+        caution: "Useful later, but not a clean Wave 1 anchor until legal/compliance approves voice and call classification."
+      },
+      {
+        id: "FF2",
+        name: "Field Force #2 - Activity Analytics (Growthbook + SAP)",
+        theme: "Field Force",
+        tier: "assumption",
+        tierLabel: "Assumption-only",
+        fields: 17,
+        available: 8,
+        partial: 2,
+        unavailable: 7,
+        source: "Inferred from SAP sales, Saathi, Growthbook and dealer master",
+        why: "Highest discovery priority. The ODS gives this use case a name only; the field map is inferred from sibling field-force use cases.",
+        ask: ["SFS definition of Activity Analytics", "Growthbook raw events", "Saathi events", "dealer and employee ID crosswalk", "outcome taxonomy", "secondary-sales and PoG capture status"],
+        build: ["fact_field_activity", "activity conversion analysis", "coverage score"],
+        caution: "Do not make a build claim until SFS scopes this use case. 15 of 17 fields are borrowed from sibling use cases; only 2 are unique."
+      }
+    ];
+
+    const sourceGrid = document.getElementById("sourceGrid");
+    const caseList = document.getElementById("caseList");
+    const caseDetail = document.getElementById("caseDetail");
+    const search = document.getElementById("search");
+    const tierFilter = document.getElementById("tierFilter");
+    const themeFilter = document.getElementById("themeFilter");
+    let selected = "FF1";
+
+    function pct(value, total) {
+      return total ? Math.round((value / total) * 100) : 0;
+    }
+
+    function renderSourceGrid() {
+      sourceGrid.innerHTML = sourceGroups.map((group) => {
+        const total = group.available + group.partial + group.unavailable;
+        return `
+          <div class="source-cell">
+            <h4>${group.name}</h4>
+            <div class="bar" aria-label="${group.name} availability">
+              <span class="seg available" style="width:${pct(group.available, total)}%"></span>
+              <span class="seg partial" style="width:${pct(group.partial, total)}%"></span>
+              <span class="seg unavailable" style="width:${pct(group.unavailable, total)}%"></span>
+            </div>
+            <div class="triple">
+              <span>Available <b>${group.available}</b></span>
+              <span>Partial <b>${group.partial}</b></span>
+              <span>Unavailable <b>${group.unavailable}</b></span>
+            </div>
+            <p class="read">${group.read}</p>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function filteredCases() {
+      const q = search.value.trim().toLowerCase();
+      return useCases.filter((item) => {
+        const text = [
+          item.id,
+          item.name,
+          item.theme,
+          item.tierLabel,
+          item.source,
+          item.why,
+          item.ask.join(" "),
+          item.build.join(" ")
+        ].join(" ").toLowerCase();
+        const tierOk = tierFilter.value === "all" || item.tier === tierFilter.value;
+        const themeOk = themeFilter.value === "all" || item.theme === themeFilter.value;
+        return tierOk && themeOk && text.includes(q);
+      });
+    }
+
+    function renderCaseList() {
+      const items = filteredCases();
+      if (!items.length) {
+        caseList.innerHTML = '<div class="empty">No use cases match this filter.</div>';
+        return;
+      }
+      if (!items.some((item) => item.id === selected)) {
+        selected = items[0].id;
+      }
+      caseList.innerHTML = items.map((item) => {
+        const total = item.fields;
+        return `
+          <button class="case-row ${item.id === selected ? "active" : ""}" data-id="${item.id}">
+            <span>
+              <span class="case-kicker">
+                <span class="badge ${item.tier}">${item.tierLabel}</span>
+                <span class="badge">${item.theme}</span>
+                <span class="badge">${item.fields} fields</span>
+              </span>
+              <strong class="case-title">${item.name}</strong>
+              <span class="case-sub">${item.why}</span>
+            </span>
+            <span class="bar-wrap">
+              <span class="bar">
+                <span class="seg available" style="width:${pct(item.available, total)}%"></span>
+                <span class="seg partial" style="width:${pct(item.partial, total)}%"></span>
+                <span class="seg unavailable" style="width:${pct(item.unavailable, total)}%"></span>
+              </span>
+              <span class="counts"><span>A ${item.available}</span><span>P ${item.partial}</span><span>U ${item.unavailable}</span></span>
+            </span>
+          </button>
+        `;
+      }).join("");
+      caseList.querySelectorAll("[data-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selected = button.dataset.id;
+          renderCaseList();
+          renderDetail();
+        });
+      });
+    }
+
+    function renderDetail() {
+      const item = useCases.find((entry) => entry.id === selected) || filteredCases()[0] || useCases[0];
+      const total = item.fields;
+      caseDetail.innerHTML = `
+        <div class="detail-body">
+          <span class="badge ${item.tier}">${item.tierLabel}</span>
+          <span class="badge">${item.theme}</span>
+          <h3>${item.name}</h3>
+          <p>${item.why}</p>
+          <div class="detail-grid">
+            <div class="mini-stat"><b>${item.available}</b><span>available fields</span></div>
+            <div class="mini-stat"><b>${item.partial}</b><span>partial fields</span></div>
+            <div class="mini-stat"><b>${item.unavailable}</b><span>unavailable fields</span></div>
+          </div>
+          <div class="bar">
+            <span class="seg available" style="width:${pct(item.available, total)}%"></span>
+            <span class="seg partial" style="width:${pct(item.partial, total)}%"></span>
+            <span class="seg unavailable" style="width:${pct(item.unavailable, total)}%"></span>
+          </div>
+          <div class="info-block">
+            <h4>Likely source systems</h4>
+            <p>${item.source}</p>
+          </div>
+          <div class="info-block">
+            <h4>Ask SFS for</h4>
+            <ul>${item.ask.map((ask) => `<li>${ask}</li>`).join("")}</ul>
+          </div>
+          <div class="info-block">
+            <h4>What we build into the columnar layer</h4>
+            <ul>${item.build.map((step) => `<li>${step}</li>`).join("")}</ul>
+          </div>
+          <div class="info-block">
+            <h4>Do not overpromise</h4>
+            <p>${item.caution}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function render() {
+      renderCaseList();
+      renderDetail();
+    }
+
+    [search, tierFilter, themeFilter].forEach((control) => {
+      control.addEventListener("input", render);
+      control.addEventListener("change", render);
+    });
+
+    document.querySelectorAll("[data-scroll]").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.getElementById(button.dataset.scroll).scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+    renderSourceGrid();
+    render();
+  </script>
+</body>
+</html>

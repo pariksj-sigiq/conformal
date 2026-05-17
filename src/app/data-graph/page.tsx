@@ -22,7 +22,7 @@ export default function DataGraphPage() {
           <div className="brand-lockup">
             <div className="sfs-mark">SFS</div>
             <div>
-              <div className="project-label">Project Leap</div>
+              <div className="project-label">Conformal</div>
               <p>Shriram Farm Solutions</p>
             </div>
           </div>

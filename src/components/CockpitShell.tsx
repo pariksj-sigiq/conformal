@@ -70,7 +70,7 @@ export function CockpitShell() {
         <div className="brand-lockup">
           <div className="sfs-mark">SFS</div>
           <div>
-            <div className="project-label">Project Leap</div>
+            <div className="project-label">Conformal</div>
             <p>Shriram Farm Solutions</p>
           </div>
         </div>
@@ -238,7 +238,7 @@ function MobileShell({ live, pinnedIds, onPinChart }: { live: boolean; pinnedIds
   }
 
   return (
-    <section className="mobile-shell" aria-label="Project Leap mobile cockpit">
+    <section className="mobile-shell" aria-label="Conformal mobile cockpit">
       <MobileHeader live={live} />
 
       <div className="mobile-content" id="mobile-main">
@@ -276,7 +276,7 @@ function MobileHeader({ live }: { live: boolean }) {
     <header className="mobile-header">
       <div className="mobile-brand">
         <div className="mobile-mark">SFS</div>
-        <strong>Project Leap</strong>
+        <strong>Conformal</strong>
       </div>
       <div className={cn("mobile-live", live && "mobile-live-on")}>
         <span />
@@ -290,7 +290,7 @@ function MobileHome({ onAsk }: { onAsk: (prompt: string) => void }) {
   const intro = useQuestionBankIntro(3);
 
   return (
-    <div className="mobile-home" aria-label="Project Leap home">
+    <div className="mobile-home" aria-label="Conformal home">
       <section className="mobile-home-hero">
         <span>Today</span>
         <h1>Executive cockpit</h1>

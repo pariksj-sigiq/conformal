@@ -756,7 +756,7 @@ function inferDomain(chart: ChartBundle, tables: string[]) {
   if (text.includes("procurement_enriched") || text.includes("procurement_spend") || text.includes("fact_procurement") || text.includes("procurement")) return "Procurement";
   if (text.includes("farmer_engagement") || text.includes("farmer")) return "Farmer engagement";
   if (text.includes("commodity_prices") || text.includes("fact_commodity_prices") || text.includes("commodity")) return "Markets";
-  if (text.includes("wave1_microbattles") || text.includes("project leap") || text.includes("microbattle")) return "Project Leap";
+  if (text.includes("wave1_microbattles") || text.includes("project leap") || text.includes("microbattle")) return "Conformal";
   if (text.includes("sales_enriched") || text.includes("secondary_sales") || text.includes("primary_sales") || text.includes("sales")) return "Sales";
   if (text.includes("churn") || text.includes("channel")) return "North Zone";
   if (text.includes("nps")) return "Farmer engagement";

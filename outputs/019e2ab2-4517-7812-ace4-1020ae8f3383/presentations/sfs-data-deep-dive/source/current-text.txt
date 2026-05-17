@@ -1,0 +1,350 @@
+PROJECT LEAP FOLLOW-UP
+
+MAY 2026
+
+Data deep-dive, integration
+vision and working-session asks
+A field-level translation of the SFS Project Leap use-case document into source systems, readiness,
+sequencing and the exact inputs needed to begin.
+
+Conformal
+
+01
+
+W H AT C H A N G E D S I N C E T H E D E M O
+
+We moved from prototype thinking to the
+data contract behind production.
+Input from SFS
+
+Our decomposition
+
+Output now
+
+The Project Leap use-case file, covering 21 use
+
+We translated the 15 custom-build use cases into
+
+A concrete ask pack: source owners, extraction
+
+cases across enterprise, procurement, field force,
+logistics and infrastructure.
+
+146 assumed fields and mapped each to likely
+source systems.
+
+routes, masked data samples, definition workshops
+and sequencing.
+
+Conformal
+
+02
+
+READINESS SNAPSHOT
+
+146 fields, mapped and assessed.
+
+33
+
+19
+
+94
+
+AVAILABLE
+
+PARTIAL
+
+UNAVAILABLE
+
+Likely exists in an owned system, mostly SAP.
+Extraction-led.
+
+Exists but needs cleanup, integration, mapping or
+scope confirmation.
+
+Not a direct field today. This is the number that needs
+interpretation.
+
+The key is what those 94 actually represent, not the headline count alone.
+
+Conformal
+
+03
+
+THE CENTRAL FINDING
+
+The real data gap is much smaller than it
+first appears.
+
+58
+
+27
+
+~9
+
+CONFORMAL COMPUTES
+
+CONFORMAL SOURCES
+
+SFS CAPTURE DECISIONS
+
+Derived metrics such as target attainment, BPV, churn
+risk and scorecards. These need definitions, not raw
+SFS fields.
+
+EXIM, commodity, GST/GSP, MCA21, credit, litigation,
+labour and utility benchmarks.
+
+Voice capture, intervention logs, RFQ triggers, product
+hierarchy and similar workflow or master-data gaps.
+
+The ask is mostly read-only access, source owners and definitions. It is not 94 new fields for SFS to create.
+
+04
+
+ARCHITECTURE PRINCIPLE
+
+The use cases are not separate builds. They
+are queries over one foundation.
+Shared facts and dimensions
+
+The linking layer
+
+Dealer, product, vendor, employee, territory, plant and time. Sales, collections, PO
+
+Dealer, vendor, material, employee and HSN crosswalks are the join layer between
+
+lines, inventory, activity, targets and schemes.
+
+SAP, field apps and external sources. This is where trust is won or lost.
+
+Build this foundation once. Enterprise, field-force and procurement use cases all reuse it.
+
+Conformal
+
+05
+
+I N T E G R AT I O N M O D E L
+
+One governed data pipe into AI agents.
+SOURCES
+
+RAW LANDING
+
+STANDARD LAYER
+
+GOLD MARTS
+
+AGENT TOOLS
+
+SAP BW / Power BI, SAP modules,
+
+Extracts stored exactly as
+
+Typed, deduplicated tables
+
+Dealer 360, field performance,
+
+SQL, retrieval, charts and
+
+Growthbook, Saathi, Concur,
+
+received, with source, run and
+
+with ID crosswalks and quality
+
+spend cube, enterprise KPIs,
+
+reports over governed views
+
+Complinity, Ariba, documents and
+
+date metadata.
+
+checks.
+
+stock and vendor scoring.
+
+only.
+
+external feeds.
+
+We are not replacing SAP, Ariba, Growthbook, Concur, Complinity or logistics systems. We build the
+governed AI and data layer above them.
+
+Conformal
+
+06
+
+W H E R E T O S TA R T
+
+Start with the data slices that unlock later
+use cases.
+SAP sales base
+
+Growthbook + Saathi
+
+SAP MM purchase base
+
+Master-data crosswalks
+
+Feeds Enterprise Assistant, Field
+
+Feeds visits, dealer context, activity
+
+Feeds Historical Spend, Vendor ID,
+
+Dealer, vendor, material, employee
+
+Performance, Dealer Profiles,
+Product Visibility, Churn and Scheme
+answers.
+
+analytics, coaching, intervention
+tracking and relationship intelligence.
+
+Negotiation Prep, Should-Cost and
+EXIM mapping.
+
+and HSN IDs make the entire
+programme joinable and trustworthy.
+
+Conformal
+
+07
+
+RECOMMENDED SEQUENCING
+
+Wave 1 should be ROI-aligned and datarealistic.
+SEQUENCE
+
+USE CASES
+
+WHY HERE
+
+Wave 1 build
+
+Enterprise Assistant, Field Performance, Dealer Profiles
+
+Strong owned-data base, limited external dependency and direct reuse of the demo foundation.
+
+Wave 1 discovery
+
+Historical Spend
+
+SAP purchase base is strong. Spend taxonomy and BPV rules need procurement sign-off.
+
+Wave 2 build
+
+Product Visibility, Stock, Scheme, Churn, Vendor ID
+
+Mostly owned data, but definitions and source-owner validation are required.
+
+External-data discovery
+
+Negotiation, Should-Cost, Import, Vendor Credit
+
+High value, but gated by EXIM, commodity, GST, MCA, credit or litigation providers.
+
+Separate track
+
+Logistics
+
+Buy-and-customise vendor/TMS track, not a custom AI build.
+
+Conformal
+
+08
+
+WAV E 1 R E C O M M E N D AT I O N
+
+Enterprise Assistant plus Field Performance
+is the clean first move.
+Enterprise Assistant
+
+Field Performance
+
+Dealer Profiles
+
+18 fields: 8 A / 4 P / 6 U. Strong pilot if scoped to
+
+20 fields: 13 A / 4 P / 3 U. SFS's highest-impact
+
+20 fields: 12 A / 4 P / 4 U. Builds dealer 360 and the
+
+confirmed SAP BW / Power BI metrics and a metric
+
+field-force use case and the strongest data start.
+
+field-facing context layer for later use cases.
+
+dictionary.
+
+The same first extracts power all three: SAP sales/dealer/targets, Growthbook/Saathi activity and the
+enterprise metric dictionary.
+
+Conformal
+
+09
+
+W H AT W E N E E D F R O M S F S
+
+Specific owners and masked extracts, not
+production access.
+Named owners
+
+Initial data pack
+
+Executive sponsor, SFS IT, SAP Basis/BW/Power BI, SAP SD/MM/FI, Master Data,
+
+Masked samples: 36 months PO line, 36 months sales/billing, collections/ageing,
+
+Growthbook, Saathi, Concur, Complinity, Ariba, legal, external-data contracting and
+security.
+
+material/vendor/dealer masters, field hierarchy, Growthbook activity, targets,
+schemes, inventory, Concur and Complinity exports.
+
+Confirm read-only extract access off existing SAP BW / Power BI.
+Confirm which unavailable fields are computed, sourced externally or require new capture.
+Book the definition workshops before scope is locked.
+
+Conformal
+
+10
+
+SCOPE REASSURANCE
+
+What we are not asking for.
+No production credentials to begin. Masked extracts are enough for discovery.
+No source-system replacement. SAP, Ariba, Growthbook, Concur, Complinity and logistics remain systems of record.
+No full-programme commitment before validation. The first sprint de-risks scope, data friction and sequencing.
+No assumption that all 21 use cases are custom builds. Logistics stays a vendor/TMS fit-gap track.
+
+Conformal
+
+11
+
+PROPOSED NEXT STEP
+
+A 60 to 90 minute working session, then a
+validated plan on real data.
+In the session
+
+After the session
+
+Walk the field map, confirm source systems, assign owners, agree masked extracts
+
+Profile sample data, stand up the first governed layer, run golden questions and
+
+and book definition workshops.
+
+return with evidence-backed sequencing and scope.
+
+This moves the engagement from a demo and use-case list to a production path grounded in SFS sourcesystem truth.
+
+Conformal
+
+12
+
+

@@ -16,6 +16,32 @@ For the analytics cockpit/demo runtime, the legacy documentation below still app
 
 ---
 
+# SFS Project Leap data-readiness workstream
+
+The newer SFS Project Leap data-readiness and proposal-prep work is documented here:
+
+1. **`Docs/SFS_PROJECT_LEAP_WORKSTREAM_OVERVIEW.md`** - master narrative, canonical counts, wave story and next steps
+2. **`Docs/SFS_ARTIFACT_INDEX.md`** - where every generated artifact lives and whether it is client-facing or internal
+3. **`deliverables/Conformal_SFS_Data_Deep_Dive_and_Asks.md`** - client-facing deep-dive document source
+4. **`deliverables/Conformal_SFS_Exact_Asks_For_Discovery.md`** - exact asks for SFS: data access, system privileges, people, meetings and workshops
+5. **`deliverables/Conformal_SFS_146_Field_Assumption_Audit.md`** - internal audit of assumptions and possible bad field mappings
+6. **`presentation/README.md`** - deck source, PDF and design notes
+7. **`conformal/README.md`** - source workbook and 146-field JSON notes
+8. **`deliverables/README.md`** - sendable versus internal deliverables
+
+Canonical current numbers:
+
+- 146 derived fields
+- 33 Available, 19 Partial, 94 Unavailable
+- 58 computed/derived unavailable fields
+- 27 externally sourced fields
+- Approximately 9 net-new capture/governance fields
+- 15 mapped build use cases, 5 logistics use cases treated separately, 1 infrastructure foundation
+
+Important caveat: SFS provided use-case narratives and source-system hints, not a confirmed field-level schema. The 146-field map is a Conformal-derived hypothesis pending SFS source-owner validation.
+
+---
+
 # SFS Enterprise Chatbot — Demo MVP
 
 AI-powered natural language analytics for Shriram Farm Solutions. Built as a demo for DCM Shriram leadership.

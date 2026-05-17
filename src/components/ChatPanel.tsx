@@ -742,7 +742,7 @@ function ChatComposer({
         <PromptInputTextarea
           suppressHydrationWarning
           placeholder="Or ask your own question..."
-          aria-label="Ask Project Leap"
+          aria-label="Ask Conformal"
         />
         <PromptInputActions className="prompt-actions">
           <span className="prompt-hint">Enter to send · Shift Enter for a new line</span>

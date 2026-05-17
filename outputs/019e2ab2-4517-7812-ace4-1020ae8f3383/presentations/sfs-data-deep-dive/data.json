@@ -1,0 +1,127 @@
+{
+  "total": 146,
+  "availability": {
+    "Available": 33,
+    "Partial": 19,
+    "Unavailable": 94
+  },
+  "computed_unavailable": 58,
+  "external_sourced": 27,
+  "net_new": 9,
+  "use_cases": {
+    "Procurement #1 - Historical Spend Analysis & Price Insights": {
+      "Available": 11,
+      "Partial": 6,
+      "Unavailable": 9,
+      "total": 26
+    },
+    "Procurement #5 - Vendor Creditworthiness & Fraud Check": {
+      "Available": 3,
+      "Partial": 1,
+      "Unavailable": 14,
+      "total": 18
+    },
+    "Procurement #4 - AI-Led Vendor Identification & Recommendation": {
+      "Available": 8,
+      "Partial": 4,
+      "Unavailable": 11,
+      "total": 23
+    },
+    "Enterprise Assistant #1 - Enterprise Chat Assistant (Supply & Sales)": {
+      "Available": 8,
+      "Partial": 4,
+      "Unavailable": 6,
+      "total": 18
+    },
+    "Procurement #3 - AI-Driven Preparation Material for Negotiations": {
+      "Available": 5,
+      "Partial": 3,
+      "Unavailable": 13,
+      "total": 21
+    },
+    "Procurement #6 - AI-Driven Should-Cost Analysis (across the top 5-10 products)": {
+      "Available": 4,
+      "Partial": 2,
+      "Unavailable": 11,
+      "total": 17
+    },
+    "Field Force #7 - Real-Time Warehouse Stock Visibility": {
+      "Available": 7,
+      "Partial": 6,
+      "Unavailable": 5,
+      "total": 18
+    },
+    "Field Force #1 - Field Performance Tracking Dashboard": {
+      "Available": 13,
+      "Partial": 4,
+      "Unavailable": 3,
+      "total": 20
+    },
+    "Field Force #6 - Unified Product & Partner-Level Visibility": {
+      "Available": 8,
+      "Partial": 2,
+      "Unavailable": 5,
+      "total": 15
+    },
+    "Field Force #3 - Pricing, Policy & Scheme Dissemination Chatbot": {
+      "Partial": 4,
+      "Available": 3,
+      "Unavailable": 7,
+      "total": 14
+    },
+    "Procurement #2 - Real-Time Import Data Analysis": {
+      "Available": 3,
+      "Partial": 2,
+      "Unavailable": 11,
+      "total": 16
+    },
+    "Field Force #4 - Dealer Profiles & Field-Visit Conversation Inputs (Saathi app)": {
+      "Available": 12,
+      "Partial": 4,
+      "Unavailable": 4,
+      "total": 20
+    },
+    "Field Force #2 - Activity Analytics (Growthbook + SAP)": {
+      "Available": 8,
+      "Partial": 2,
+      "Unavailable": 7,
+      "total": 17
+    },
+    "Field Force #5 - AI-Enabled Sales Coaching": {
+      "Partial": 2,
+      "Available": 4,
+      "Unavailable": 12,
+      "total": 18
+    },
+    "Field Force #8 - Early Warning for Sales Performance & Dealer Churn Risk": {
+      "Partial": 2,
+      "Available": 7,
+      "Unavailable": 10,
+      "total": 19
+    }
+  },
+  "source_groups": {
+    "SAP": {
+      "Available": 30,
+      "Partial": 8,
+      "Unavailable": 2
+    },
+    "Computed / Derived": {
+      "Unavailable": 58
+    },
+    "Internal Apps": {
+      "Partial": 9,
+      "Unavailable": 7,
+      "Available": 3
+    },
+    "External (Market Data)": {
+      "Unavailable": 14
+    },
+    "External (Risk/Compliance)": {
+      "Unavailable": 13
+    },
+    "Logistics": {
+      "Partial": 2
+    }
+  }
+}
